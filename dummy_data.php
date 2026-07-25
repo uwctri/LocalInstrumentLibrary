@@ -8,12 +8,14 @@ $instruments = [
             "Demographics",
             "Clinical"
         ],
-        "version" => "v2.1.0",
+        "versions" => [
+            ["version" => "1.0.0", "doc_id" => "a1b2c3d4"],
+            ["version" => "2.0.0", "doc_id" => "e5f6g7h8"],
+            ["version" => "2.1.0", "doc_id" => "i9j0k1l2"]
+        ],
         "description" => "Captures comprehensive participant demographics including age, gender, race, ethnicity, employment, and education details. Standardized for multi-site clinical trials.",
-        "fields_count" => 14,
         "installs" => 342,
         "time" => "5 mins",
-        "installed" => true,
         "author_name" => "Sarah Jenkins, PhD",
         "author_email" => "s.jenkins@geisinger.edu",
         "fields" => [
@@ -40,12 +42,14 @@ $instruments = [
             "Mental Health",
             "Screening"
         ],
-        "version" => "v1.0.2",
+        "versions" => [
+            ["version" => "1.0.0", "doc_id" => "z1x2c3v4"],
+            ["version" => "1.0.1", "doc_id" => "b5n6m7q8"],
+            ["version" => "1.0.2", "doc_id" => "w9e0r1t2"]
+        ],
         "description" => "Standardized 9-item self-report scale for assessing depression severity. Includes automated scoring logic and branching criteria.",
-        "fields_count" => 10,
         "installs" => 512,
         "time" => "3 mins",
-        "installed" => false,
         "author_name" => "Marcus Vance, MD",
         "author_email" => "m.vance@geisinger.edu",
         "fields" => [
@@ -68,12 +72,13 @@ $instruments = [
             "Clinical",
             "Patient Feedback"
         ],
-        "version" => "v1.1.0",
+        "versions" => [
+            ["version" => "1.0.0", "doc_id" => "y1u2i3o4"],
+            ["version" => "1.1.0", "doc_id" => "p5a6s7d8"]
+        ],
         "description" => "A 36-item, patient-reported survey of patient health. Measures health-related quality of life across eight physical and mental domains.",
-        "fields_count" => 36,
         "installs" => 189,
         "time" => "12 mins",
-        "installed" => false,
         "author_name" => "Global Health Consortium",
         "author_email" => "support@geisinger.edu",
         "fields" => [
@@ -92,12 +97,14 @@ $instruments = [
             "Screening",
             "Clinical"
         ],
-        "version" => "v3.0.1",
+        "versions" => [
+            ["version" => "1.0.0", "doc_id" => "f1g2h3j4"],
+            ["version" => "2.0.0", "doc_id" => "k5l6z7x8"],
+            ["version" => "3.0.1", "doc_id" => "c9v0b1n2"]
+        ],
         "description" => "Comprehensive screening questionnaire covering active symptoms, exposure history, vaccination status, and vital sign checks.",
-        "fields_count" => 16,
         "installs" => 98,
         "time" => "4 mins",
-        "installed" => false,
         "author_name" => "REDCap Screening Group",
         "author_email" => "screening-team@geisinger.edu",
         "fields" => [
@@ -115,12 +122,14 @@ $instruments = [
         "categories" => [
             "Clinical"
         ],
-        "version" => "v1.2.0",
+        "versions" => [
+            ["version" => "1.0.0", "doc_id" => "m1q2w3e4"],
+            ["version" => "1.1.0", "doc_id" => "r5t6y7u8"],
+            ["version" => "1.2.0", "doc_id" => "i9o0p1a2"]
+        ],
         "description" => "Log sheet for recording standard physical metrics including blood pressure, heart rate, temperature, weight, and blood glucose level.",
-        "fields_count" => 8,
         "installs" => 275,
         "time" => "2 mins",
-        "installed" => false,
         "author_name" => "Clinical Research Core",
         "author_email" => "clinical-core@geisinger.edu",
         "fields" => [
@@ -140,12 +149,13 @@ $instruments = [
             "Pediatrics",
             "Screening"
         ],
-        "version" => "v1.0.1",
+        "versions" => [
+            ["version" => "1.0.0", "doc_id" => "s1d2f3g4"],
+            ["version" => "1.0.1", "doc_id" => "h5j6k7l8"]
+        ],
         "description" => "Standardized questionnaire for assessing asthma control in children aged 4 to 11 years. Includes parent and child response sections.",
-        "fields_count" => 7,
         "installs" => 145,
         "time" => "3 mins",
-        "installed" => false,
         "author_name" => "Marcus Vance, MD",
         "author_email" => "m.vance@geisinger.edu",
         "fields" => [
@@ -165,12 +175,13 @@ $instruments = [
             "Neurology",
             "Mental Health"
         ],
-        "version" => "v2.0.0",
+        "versions" => [
+            ["version" => "1.0.0", "doc_id" => "z9x8c7v6"],
+            ["version" => "2.0.0", "doc_id" => "b5n4m3q2"]
+        ],
         "description" => "A 30-point questionnaire used extensively in clinical and research settings to measure cognitive impairment and screen for dementia.",
-        "fields_count" => 11,
         "installs" => 302,
         "time" => "8 mins",
-        "installed" => false,
         "author_name" => "Sarah Jenkins, PhD",
         "author_email" => "s.jenkins@geisinger.edu",
         "fields" => [
@@ -189,12 +200,12 @@ $instruments = [
             "Oncology",
             "Clinical"
         ],
-        "version" => "v1.0.0",
+        "versions" => [
+            ["version" => "1.0.0", "doc_id" => "w1e2r3t4"]
+        ],
         "description" => "Standardized scale to assess a patient's functional impairment, used to compare effectiveness of different therapies and assess prognosis.",
-        "fields_count" => 3,
         "installs" => 112,
         "time" => "1 min",
-        "installed" => false,
         "author_name" => "Clinical Research Core",
         "author_email" => "clinical-core@geisinger.edu",
         "fields" => [
@@ -210,12 +221,14 @@ $instruments = [
             "Cardiology",
             "Patient Feedback"
         ],
-        "version" => "v1.1.2",
+        "versions" => [
+            ["version" => "1.0.0", "doc_id" => "y5u6i7o8"],
+            ["version" => "1.1.0", "doc_id" => "p9a0s1d2"],
+            ["version" => "1.1.2", "doc_id" => "f3g4h5j6"]
+        ],
         "description" => "A self-administered patient-reported outcome measure designed to assess the effects of heart failure on a patient's daily life.",
-        "fields_count" => 6,
         "installs" => 84,
         "time" => "6 mins",
-        "installed" => false,
         "author_name" => "Marcus Vance, MD",
         "author_email" => "m.vance@geisinger.edu",
         "fields" => [
@@ -233,12 +246,14 @@ $instruments = [
         "categories" => [
             "Patient Feedback"
         ],
-        "version" => "v2.0.1",
+        "versions" => [
+            ["version" => "1.0.0", "doc_id" => "k1l2z3x4"],
+            ["version" => "2.0.0", "doc_id" => "c5v6b7n8"],
+            ["version" => "2.0.1", "doc_id" => "m9q0w1e2"]
+        ],
         "description" => "Feedback questionnaire measuring patient satisfaction with clinical staff, facilities, scheduling efficiency, and overall care quality.",
-        "fields_count" => 5,
         "installs" => 421,
         "time" => "4 mins",
-        "installed" => false,
         "author_name" => "REDCap Screening Group",
         "author_email" => "screening-team@geisinger.edu",
         "fields" => [
@@ -256,12 +271,12 @@ $instruments = [
             "Clinical",
             "Screening"
         ],
-        "version" => "v1.0.0",
+        "versions" => [
+            ["version" => "1.0.0", "doc_id" => "r3t4y5u6"]
+        ],
         "description" => "Extensive multi-system clinical assessment questionnaire. Includes detailed sections on cardiovascular health, respiratory function, neurological baseline, psychiatric screening, and lifestyle risk factors.",
-        "fields_count" => 32,
         "installs" => 45,
         "time" => "15 mins",
-        "installed" => false,
         "author_name" => "Clinical Research Core",
         "author_email" => "clinical-core@geisinger.edu",
         "fields" => [

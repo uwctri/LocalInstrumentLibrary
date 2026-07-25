@@ -1,8 +1,81 @@
 <?php
 
 /** @var \UWMadison\LocalInstrumentLibrary\LocalInstrumentLibrary $module */
+
+// Handle AJAX actions
+if (isset($_GET['action']) && isset($_GET['id'])) {
+    $action = $_GET['action'];
+    $inst_id = $_GET['id'];
+    $installed_instruments = $module->getProjectSetting('installed_instruments');
+    if ($installed_instruments === null) {
+        $installed_instruments = ['standard_demographics'];
+    }
+
+    if ($action === 'install') {
+        if (!in_array($inst_id, $installed_instruments)) {
+            $installed_instruments[] = $inst_id;
+            $module->setProjectSetting('installed_instruments', $installed_instruments);
+        }
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'success', 'installed' => $installed_instruments]);
+        exit;
+    } elseif ($action === 'uninstall') {
+        if (($key = array_search($inst_id, $installed_instruments)) !== false) {
+            unset($installed_instruments[$key]);
+            $installed_instruments = array_values($installed_instruments);
+            $module->setProjectSetting('installed_instruments', $installed_instruments);
+        }
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'success', 'installed' => $installed_instruments]);
+        exit;
+    }
+}
+
 require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
 require_once __DIR__ . '/dummy_data.php';
+
+// Helper to compare semantic versions in PHP
+function comparePHPVersions($v1, $v2)
+{
+    $parts1 = explode('.', $v1);
+    $parts2 = explode('.', $v2);
+    for ($i = 0; $i < max(count($parts1), count($parts2)); $i++) {
+        $p1 = isset($parts1[$i]) ? (int)$parts1[$i] : 0;
+        $p2 = isset($parts2[$i]) ? (int)$parts2[$i] : 0;
+        if ($p1 > $p2) return 1;
+        if ($p1 < $p2) return -1;
+    }
+    return 0;
+}
+
+// Extract the latest version dynamically from the versions array for backward compatibility
+foreach ($instruments as &$inst) {
+    $id = $inst['id'];
+    $latest = "0.0.0";
+    if (isset($inst['versions']) && is_array($inst['versions'])) {
+        foreach ($inst['versions'] as $vObj) {
+            $v = $vObj['version'];
+            if (comparePHPVersions($v, $latest) > 0) {
+                $latest = $v;
+            }
+        }
+    }
+    $inst['version'] = 'v' . $latest;
+}
+unset($inst);
+
+// Retrieve the installed instruments list for this project
+$installed_instruments = $module->getProjectSetting('installed_instruments');
+if ($installed_instruments === null) {
+    // Default installed instrument for demo purposes
+    $installed_instruments = ['standard_demographics'];
+}
+
+// Map installed status dynamically
+foreach ($instruments as &$inst) {
+    $inst['installed'] = in_array($inst['id'], $installed_instruments);
+}
+unset($inst);
 
 // Retrieve categories from system settings configuration
 $configured_categories = $module->getSystemSetting('categories');
@@ -151,7 +224,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     </div>
 
     <!-- Instruments Cards Grid -->
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="instruments-grid">
+    <div class="row g-4" id="instruments-grid">
         <?php foreach ($instruments as $inst): ?>
             <div class="col instrument-card-col"
                 data-id="<?= $inst['id']; ?>"
@@ -193,7 +266,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                             <div class="card-meta d-flex justify-content-between border-top pt-3 mb-3 text-secondary" style="font-size: 0.8rem;">
                                 <div class="meta-item d-flex align-items-center gap-1">
                                     <i class="fa-solid fa-list-check opacity-75"></i>
-                                    <span><?= $inst['fields_count']; ?> Fields</span>
+                                    <span><?= count($inst['fields']); ?> Fields</span>
                                 </div>
                                 <div class="meta-item d-flex align-items-center gap-1">
                                     <i class="fa-solid fa-clock opacity-75"></i>
@@ -230,7 +303,6 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     <div class="lib-empty-state text-center py-5 bg-white border border-dashed rounded-3 mt-4 text-secondary shadow-sm" id="lib-empty" style="display: none;">
         <i class="fa-solid fa-folder-open display-4 mb-3 text-muted opacity-50"></i>
         <h3 class="h5 text-dark fw-semibold mb-1">No instruments found</h3>
-        <p class="small text-muted mb-0">Try refining your search term or selecting another category.</p>
     </div>
 </div>
 
@@ -276,12 +348,17 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                                 <a class="btn btn-outline-secondary w-100 py-2.5 fw-semibold d-inline-flex align-items-center justify-content-center gap-2 mt-2" id="modal-download-btn" href="#">
                                     <i class="fa-solid fa-file-zipper me-2"></i>Download ZIP Package
                                 </a>
+                                <div class="text-center mt-3">
+                                    <button class="btn btn-link text-danger text-opacity-75 text-decoration-none btn-sm p-0 fw-semibold d-none" id="modal-remove-btn" style="font-size: 0.78rem;">
+                                        <i class="fa-solid fa-trash-can me-1"></i>Mark as Removed
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Fields List -->
                         <div class="col-12 col-md-8 p-4 d-flex flex-column preview-fields-container">
-                            <h4 class="text-dark fw-bold mb-3 h6" id="modal-fields-heading">Instrument Fields (12)</h4>
+                            <h4 class="text-dark fw-bold mb-3 h6" id="modal-fields-heading">Instrument Fields (Placeholder)</h4>
                             <div class="border rounded-3 bg-white shadow-inner preview-fields-list">
                                 <ul class="list-group list-group-flush" id="modal-field-list" style="margin: 0; padding: 0;">
                                     <!-- Fields populated dynamically via JS -->
@@ -441,10 +518,11 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                                     <label for="submit-project-instrument" class="form-label small fw-bold text-secondary mb-1">Existing Project Instruments</label>
                                     <select class="form-select border-secondary border-opacity-25" id="submit-project-instrument" disabled>
                                         <option value="" disabled selected>Choose an instrument from this active project...</option>
-                                        <option value="demographics_survey">Demographics Questionnaire (14 fields)</option>
-                                        <option value="participant_consent">Electronic Consent Form v2 (5 fields)</option>
-                                        <option value="intake_form">Baseline Clinical Intake Form (32 fields)</option>
-                                        <option value="followup_feedback">Participant Follow-up Feedback Sheet (10 fields)</option>
+                                        <?php
+                                        global $Proj;
+                                        foreach ($Proj->forms as $form_name => $form_info)
+                                            echo '<option value="' . htmlspecialchars($form_name, ENT_QUOTES) . '">' . htmlspecialchars($form_info['menu'], ENT_QUOTES) . ' (' . count($form_info['fields']) . ' fields)</option>';
+                                        ?>
                                     </select>
                                     <div class="invalid-feedback">Please select an instrument to submit.</div>
                                     <p class="small text-muted mt-2 mb-0"><i class="fa-solid fa-circle-info me-1"></i> Selecting this option will generate a zip package automatically using metadata from the active project's database.</p>

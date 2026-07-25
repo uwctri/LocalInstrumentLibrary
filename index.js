@@ -578,24 +578,11 @@ function openPreview(instId) {
     $("#modal-author").text(data.author_name);
     $("#modal-author-email").attr("href", "mailto:" + data.author_email);
     $("#modal-desc").text(data.description);
-    $("#modal-fields-heading").text("Instrument Fields (" + data.fields_count + ")");
+    $("#modal-fields-heading").text("Instrument Fields (" + data.fields.length + ")");
 
     // Populate Fields List
     const list = $("#modal-field-list");
     list.empty();
-
-    // Ensure we display all fields by filling in mock fields if it was a subset in mock data
-    if (data.fields.length < data.fields_count) {
-        const diff = data.fields_count - data.fields.length;
-        for (let i = 0; i < diff; i++) {
-            const index = data.fields.length + 1;
-            data.fields.push({
-                label: "Additional Mock Survey Question #" + index,
-                variable: "survey_field_" + index,
-                type: "text"
-            });
-        }
-    }
 
     data.fields.forEach(function (field) {
         const li = $('<li class="list-group-item d-flex justify-content-between align-items-center py-3 px-4 border-bottom"></li>');
@@ -615,6 +602,7 @@ function openPreview(instId) {
 
     // Configure Modal Install Button state
     const modalInstallBtn = $("#modal-install-btn");
+    const modalRemoveBtn = $("#modal-remove-btn");
 
     // Check if currently installed
     const cardInstallBtn = $(".instrument-card-col[data-id='" + instId + "'] .btn-install");
@@ -622,10 +610,17 @@ function openPreview(instId) {
         modalInstallBtn.addClass("is-installed")
             .prop("disabled", true)
             .html('<i class="fa-solid fa-check me-2"></i>Installed');
+
+        modalRemoveBtn.removeClass("d-none")
+            .off("click")
+            .on("click", function () {
+                previewModal.hide();
+                removeInstrument(instId);
+            });
     } else {
         modalInstallBtn.removeClass("is-installed")
             .prop("disabled", false)
-            .html('<i class="fa-solid fa-download me-2"></i>Install to Project')
+            .html('<i class="fa-solid fa-download me-2"></i>Install')
             .off("click")
             .on("click", function () {
                 previewModal.hide();
@@ -633,6 +628,8 @@ function openPreview(instId) {
                 const btn = $(".instrument-card-col[data-id='" + instId + "'] .btn-install")[0];
                 installInstrument(btn, instId);
             });
+
+        modalRemoveBtn.addClass("d-none");
     }
 
     // Configure Modal Download Button click handler
@@ -665,7 +662,7 @@ function closePreview() {
     previewModal.hide();
 }
 
-// Simulated Installation Flow
+// Installation Flow
 function installInstrument(buttonEl, instId) {
     const btn = $(buttonEl);
     if (btn.hasClass("is-installed") || btn.prop("disabled")) return;
@@ -674,34 +671,103 @@ function installInstrument(buttonEl, instId) {
     btn.prop("disabled", true)
         .html('<i class="fa-solid fa-spinner fa-spin me-2"></i>Installing...');
 
-    // Simulate server installation latency
-    setTimeout(function () {
-        // Find instrument data
-        const data = instrumentFields[instId];
-        if (data) {
-            data.installed = true;
+    // Make AJAX call to save install status in project setting
+    $.ajax({
+        url: window.location.href + "&action=install&id=" + encodeURIComponent(instId),
+        type: "GET",
+        dataType: "json",
+        success: function (response) {
+            if (response && response.status === "success") {
+                const data = instrumentFields[instId];
+                if (data) {
+                    data.installed = true;
+                }
+
+                // Add visual indicators to the card
+                const card = $(".instrument-card-col[data-id='" + instId + "'] .instrument-card");
+                card.addClass("installed");
+
+                // Add Installed Badge if it doesn't exist
+                const cardTop = $(".instrument-card-col[data-id='" + instId + "'] .card-top");
+                if (cardTop.find(".bg-success").length === 0) {
+                    cardTop.find(".d-flex").prepend('<span class="badge bg-success text-white px-2 py-1 fw-bold rounded-pill" style="font-size: 0.7rem;"><i class="fa-solid fa-circle-check me-1"></i>Installed</span>');
+                }
+
+                // Finalize button state on card
+                btn.addClass("is-installed")
+                    .removeClass("btn-primary")
+                    .addClass("btn-success")
+                    .html('<i class="fa-solid fa-check me-2"></i>Installed')
+                    .prop("disabled", true);
+                installedCount++;
+                $("#stat-installed").text(installedCount + " Installed in Project");
+
+                // Trigger Success Toast
+                showToast("'" + (data ? data.title : "Instrument") + "' successfully installed to this project!");
+            } else {
+                btn.prop("disabled", false).html('<i class="fa-solid fa-download me-2"></i>Install');
+                showToast("Failed to install instrument. Please try again.");
+            }
+        },
+        error: function () {
+            btn.prop("disabled", false).html('<i class="fa-solid fa-download me-2"></i>Install');
+            showToast("Failed to install instrument due to network error.");
         }
+    });
+}
 
-        // Add visual indicators to the card
-        const card = $(".instrument-card-col[data-id='" + instId + "'] .instrument-card");
-        card.addClass("installed");
+// Removal Flow (Uninstall)
+function removeInstrument(instId) {
+    const cardInstallBtn = $(".instrument-card-col[data-id='" + instId + "'] .btn-install");
+    const btn = $(cardInstallBtn[0]);
+    if (!btn.hasClass("is-installed")) return;
 
-        // Add Installed Badge if it doesn't exist
-        const cardTop = $(".instrument-card-col[data-id='" + instId + "'] .card-top");
-        if (cardTop.find(".bg-success").length === 0) {
-            cardTop.find(".d-flex").prepend('<span class="badge bg-success text-white px-2 py-1 fw-bold rounded-pill" style="font-size: 0.7rem;"><i class="fa-solid fa-circle-check me-1"></i>Installed</span>');
+    btn.prop("disabled", true)
+        .html('<i class="fa-solid fa-spinner fa-spin me-2"></i>Removing...');
+
+    $.ajax({
+        url: window.location.href + "&action=uninstall&id=" + encodeURIComponent(instId),
+        type: "GET",
+        dataType: "json",
+        success: function (response) {
+            if (response && response.status === "success") {
+                const data = instrumentFields[instId];
+                if (data) {
+                    data.installed = false;
+                }
+
+                // Remove visual indicators from the card
+                const card = $(".instrument-card-col[data-id='" + instId + "'] .instrument-card");
+                card.removeClass("installed");
+
+                // Remove Installed Badge
+                const cardTop = $(".instrument-card-col[data-id='" + instId + "'] .card-top");
+                cardTop.find(".bg-success").remove();
+
+                // Restore install button state on card
+                btn.removeClass("is-installed")
+                    .removeClass("btn-success")
+                    .addClass("btn-primary")
+                    .html('<i class="fa-solid fa-download me-2"></i>Install')
+                    .prop("disabled", false);
+
+                if (installedCount > 0) {
+                    installedCount--;
+                }
+                $("#stat-installed").text(installedCount + " Installed in Project");
+
+                // Trigger Success Toast
+                showToast("'" + (data ? data.title : "Instrument") + "' successfully removed from this project!");
+            } else {
+                btn.prop("disabled", true).html('<i class="fa-solid fa-check me-2"></i>Installed');
+                showToast("Failed to remove instrument. Please try again.");
+            }
+        },
+        error: function () {
+            btn.prop("disabled", true).html('<i class="fa-solid fa-check me-2"></i>Installed');
+            showToast("Failed to remove instrument due to network error.");
         }
-
-        // Finalize button state on card
-        btn.addClass("is-installed")
-            .html('<i class="fa-solid fa-check me-2"></i>Installed')
-            .prop("disabled", true);
-        installedCount++;
-        $("#stat-installed").text(installedCount + " Installed in Project");
-
-        // Trigger Success Toast
-        showToast("'" + (data ? data.title : "Instrument") + "' successfully installed to this project!");
-    }, 1500);
+    });
 }
 
 // Toast notification display helper
