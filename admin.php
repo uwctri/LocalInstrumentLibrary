@@ -1,6 +1,12 @@
 <?php
-
 /** @var \UWMadison\LocalInstrumentLibrary\LocalInstrumentLibrary $module */
+
+// Protect page from non-admin users (ControlCenter/header.php automatically does this, but it's good practice)
+if (!SUPER_USER) {
+    print "<div class='red'>Access Denied</div>";
+    return;
+}
+
 // Include REDCap Control Center Header
 require_once APP_PATH_DOCROOT . 'ControlCenter/header.php';
 
@@ -117,11 +123,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     <?= $dynamic_category_styles ?>
 
     /* Force full-width container overrides on REDCap layout */
-    #center,
-    #pagecontainer,
-    .col-md-9,
-    #sub-viewport,
-    .viewport {
+    #center, #pagecontainer, .col-md-9, #sub-viewport, .viewport {
         max-width: 100% !important;
         width: 100% !important;
     }
@@ -303,9 +305,17 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     .btn-circle-action:hover {
         background-color: #e2e8f0;
     }
+
+    /* Custom Category Checkbox styling (matches submission form size & padding) */
+    .edit-cat-checkbox:checked + label {
+        background-color: #eff6ff !important;
+        border-color: #3b82f6 !important;
+        color: #1d4ed8 !important;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08) !important;
+    }
 </style>
 
-<div id="local-instrument-lib-admin-container" class="container-fluid px-0">
+<div id="local-instrument-lib-admin-container" class="container-fluid py-4 px-0">
     <!-- Header Banner -->
     <div class="admin-header p-4 p-md-5 mb-4 text-white position-relative shadow-sm">
         <h2 class="display-6 fw-bold mb-2" style="font-family: 'Outfit', sans-serif;">Instrument Library Administration</h2>
@@ -347,9 +357,9 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                     <table class="table-custom" id="active-library-table">
                         <thead>
                             <tr>
-                                <th style="width: 35%;">Instrument Details</th>
+                                <th style="width: 32%;">Instrument Details</th>
                                 <th style="width: 20%;">Categories</th>
-                                <th style="width: 15%;">Versions & Downloads</th>
+                                <th style="width: 18%;">Versions & Downloads</th>
                                 <th style="width: 13%;">Fields & Time</th>
                                 <th style="width: 17%;">Author</th>
                                 <th style="width: 10%; text-align: center;">Actions</th>
@@ -453,7 +463,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                 <form id="edit-instrument-form" novalidate>
                     <input type="hidden" id="edit-id">
                     <input type="hidden" id="edit-type">
-
+                    
                     <div class="mb-3">
                         <label for="edit-title" class="form-label small fw-bold text-secondary mb-1">Instrument Title</label>
                         <input type="text" class="form-control border-secondary border-opacity-25 py-2" id="edit-title" required>
@@ -474,12 +484,12 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                                 <?php foreach ($categories_list as $cat): ?>
                                     <?php $cleanId = 'edit-cat-' . strtolower(str_replace(' ', '', $cat['name'])); ?>
                                     <div class="col-6 col-md-4">
-                                        <input class="btn-check edit-cat-checkbox" type="checkbox" value="<?= htmlspecialchars($cat['name']); ?>" id="<?= $cleanId; ?>" autocomplete="off">
+                                        <input class="edit-cat-checkbox" type="checkbox" value="<?= htmlspecialchars($cat['name']); ?>" id="<?= $cleanId; ?>" autocomplete="off" style="display: none !important;">
                                         <label class="btn btn-outline-secondary w-100 py-2 px-3 text-start d-flex align-items-center justify-content-between rounded-3 cursor-pointer" for="<?= $cleanId; ?>">
                                             <span class="small fw-semibold text-dark"><?= htmlspecialchars($cat['name']); ?></span>
-                                            <span class="checkbox-box">
+                                            <span class="checkbox-box" style="font-size: 1.15rem;">
                                                 <i class="far fa-square text-muted unchecked-icon"></i>
-                                                <i class="fas fa-check-square checked-icon d-none"></i>
+                                                <i class="fas fa-check-square checked-icon d-none" style="color: #3b82f6 !important;"></i>
                                             </span>
                                         </label>
                                     </div>
@@ -535,7 +545,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     let pendingSubmissions = <?= json_encode(array_values($dummy_submissions)); ?>;
     let previewModalObj, editModalObj;
 
-    $(document).ready(function() {
+    $(document).ready(function () {
         previewModalObj = new bootstrap.Modal(document.getElementById('preview-modal'));
         editModalObj = new bootstrap.Modal(document.getElementById('edit-modal'));
 
@@ -552,11 +562,9 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         $(document).on('change', '.edit-cat-checkbox', function() {
             const label = $(`label[for="${$(this).attr('id')}"]`);
             if ($(this).is(':checked')) {
-                label.addClass('btn-primary border-primary').removeClass('btn-outline-secondary');
                 label.find('.unchecked-icon').addClass('d-none');
                 label.find('.checked-icon').removeClass('d-none');
             } else {
-                label.removeClass('btn-primary border-primary').addClass('btn-outline-secondary');
                 label.find('.unchecked-icon').removeClass('d-none');
                 label.find('.checked-icon').addClass('d-none');
             }
@@ -565,7 +573,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         // Edit form submission
         $("#edit-instrument-form").on("submit", function(e) {
             e.preventDefault();
-
+            
             // Validate checkboxes
             const selectedCats = [];
             $(".edit-cat-checkbox:checked").each(function() {
@@ -632,11 +640,12 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         tbody.empty();
 
         let filtered = activeInstruments.filter(inst => {
-            const matchSearch =
+            const matchSearch = 
                 inst.id.toLowerCase().includes(query) ||
                 inst.title.toLowerCase().includes(query) ||
                 inst.description.toLowerCase().includes(query) ||
                 inst.author_name.toLowerCase().includes(query) ||
+                (inst.submitted_by && inst.submitted_by.toLowerCase().includes(query)) ||
                 (inst.categories && inst.categories.some(c => c.toLowerCase().includes(query)));
             return matchSearch;
         });
@@ -661,7 +670,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                 catBadges += `<span class="badge ${cls} me-1 mb-1 px-2.5 py-1.5 text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.05em;">${escapeHtml(cat)}</span>`;
             });
 
-            // Generate Versions Dropdown
+            // Generate Versions Dropdown with submission metadata
             let versionsDropdown = "";
             if (inst.versions && inst.versions.length > 0) {
                 let dropdownItems = "";
@@ -670,9 +679,16 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                     const latestBadge = isLatest ? '<span class="badge bg-success ms-2 font-weight-bold" style="font-size:0.65rem;">Active</span>' : '';
                     dropdownItems += `
                         <li>
-                            <a class="dropdown-item dropdown-version-item py-1 px-3 d-flex align-items-center justify-content-between cursor-pointer" onclick="downloadMockVersion('${inst.id}', '${vObj.version}')">
-                                <span class="small font-monospace text-secondary">v${vObj.version} ${latestBadge}</span>
-                                <i class="fas fa-download text-muted small ms-3"></i>
+                            <a class="dropdown-item dropdown-version-item py-2 px-3 cursor-pointer" onclick="downloadMockVersion('${inst.id}', '${vObj.version}')">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold font-monospace text-dark">v${vObj.version}</span>
+                                    ${latestBadge}
+                                </div>
+                                <div class="text-muted small mt-1" style="font-size: 0.72rem;">
+                                    <i class="fas fa-user me-1"></i>${escapeHtml(vObj.submitted_by || 'admin')}
+                                    <span class="mx-1">•</span>
+                                    <i class="far fa-calendar-alt me-1"></i>${escapeHtml(vObj.submitted_date || 'N/A')}
+                                </div>
                             </a>
                         </li>
                     `;
@@ -683,8 +699,8 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                         <button class="btn btn-sm btn-light border dropdown-toggle fw-semibold font-monospace" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             ${inst.version}
                         </button>
-                        <ul class="dropdown-menu shadow-sm" style="font-size: 0.85rem;">
-                            <li class="dropdown-header text-uppercase tracking-wider fw-bold text-muted" style="font-size:0.68rem;">Download Package</li>
+                        <ul class="dropdown-menu shadow-sm" style="font-size: 0.85rem; min-width: 210px;">
+                            <li class="dropdown-header text-uppercase tracking-wider fw-bold text-muted" style="font-size:0.68rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem; margin-bottom: 0.4rem;">Versions & Submissions</li>
                             ${dropdownItems}
                         </ul>
                     </div>
@@ -695,9 +711,9 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
 
             // Status Badge
             const isHidden = inst.status === 'hidden';
-            const statusBadge = isHidden ?
-                `<span class="badge-status badge-status-hidden"><i class="fas fa-eye-slash"></i> Hidden</span>` :
-                `<span class="badge-status badge-status-active"><i class="fas fa-check-circle"></i> Active</span>`;
+            const statusBadge = isHidden 
+                ? `<span class="badge-status badge-status-hidden"><i class="fas fa-eye-slash"></i> Hidden</span>`
+                : `<span class="badge-status badge-status-active"><i class="fas fa-check-circle"></i> Active</span>`;
 
             const hideText = isHidden ? "Unhide" : "Hide";
             const hideIcon = isHidden ? "fa-eye" : "fa-eye-slash";
@@ -709,7 +725,10 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                 <tr class="${rowClass}">
                     <td>
                         <div class="fw-bold text-dark mb-1" style="font-size:0.95rem;">${escapeHtml(inst.title)}</div>
-                        <div class="text-secondary font-monospace" style="font-size:0.75rem;">ID: ${escapeHtml(inst.id)}</div>
+                        <div class="text-secondary font-monospace mb-1" style="font-size:0.75rem;">ID: ${escapeHtml(inst.id)}</div>
+                        <div class="text-muted small mb-2" style="font-size: 0.78rem;">
+                            <i class="fas fa-user me-1"></i>Submitted by: <strong>${escapeHtml(inst.submitted_by || 'admin')}</strong> on <strong>${escapeHtml(inst.submitted_date || 'N/A')}</strong>
+                        </div>
                         <div class="mt-1">${statusBadge}</div>
                     </td>
                     <td>
@@ -729,7 +748,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                         <div class="text-muted small" style="font-size:0.78rem;">${escapeHtml(inst.author_email)}</div>
                     </td>
                     <td>
-                        <div class="d-flex justify-content-center gap-1.5">
+                        <div class="d-flex justify-content-center" style="gap: 8px !important;">
                             <button class="btn btn-sm btn-outline-primary btn-circle-action" onclick="openEditModal('${inst.id}', 'active')" title="Edit Metadata">
                                 <i class="fas fa-edit"></i>
                             </button>
@@ -789,11 +808,11 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                             </div>
                             <div class="submission-card-body">
                                 <div class="mb-3 d-flex flex-wrap gap-2 text-secondary small">
-                                    <span><i class="fas fa-user me-1 text-muted"></i>By: <strong>${escapeHtml(sub.author_name)}</strong></span>
+                                    <span><i class="fas fa-user me-1 text-muted"></i>Submitter: <strong>${escapeHtml(sub.submitted_by)}</strong></span>
                                     <span class="text-muted opacity-50">|</span>
                                     <span><i class="far fa-envelope me-1 text-muted"></i>${escapeHtml(sub.author_email)}</span>
                                     <span class="text-muted opacity-50">|</span>
-                                    <span><i class="far fa-calendar-alt me-1 text-muted"></i>Subed: ${escapeHtml(sub.submission_date)}</span>
+                                    <span><i class="far fa-calendar-alt me-1 text-muted"></i>Subed: ${escapeHtml(sub.submitted_date)}</span>
                                 </div>
                                 <p class="text-muted mb-3 small" style="line-height:1.5; font-size:0.85rem;">
                                     ${escapeHtml(sub.description)}
@@ -859,9 +878,8 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
             $(".edit-cat-checkbox").prop("checked", false);
             $(".edit-cat-checkbox").each(function() {
                 const label = $(`label[for="${$(this).attr('id')}"]`);
-                label.removeClass('btn-primary border-primary').addClass('btn-outline-secondary');
                 label.find('.unchecked-icon').removeClass('d-none');
-                label.find('.checked-icon').removeClass('d-none');
+                label.find('.checked-icon').addClass('d-none');
             });
 
             // Check matching category boxes
@@ -870,7 +888,6 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                 if (checkbox.length) {
                     checkbox.prop("checked", true);
                     const label = $(`label[for="${checkbox.attr('id')}"]`);
-                    label.addClass('btn-primary border-primary').removeClass('btn-outline-secondary');
                     label.find('.unchecked-icon').addClass('d-none');
                     label.find('.checked-icon').removeClass('d-none');
                 }
@@ -936,10 +953,10 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         const subIndex = pendingSubmissions.findIndex(s => s.id === id);
         if (subIndex > -1) {
             const sub = pendingSubmissions[subIndex];
-
+            
             // Remove from pending
             pendingSubmissions.splice(subIndex, 1);
-
+            
             // Transform and add to active (simulate approval)
             const newInst = {
                 id: sub.id,
@@ -953,7 +970,9 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                 author_email: sub.author_email,
                 fields: sub.fields,
                 version: 'v' + sub.versions[0].version,
-                status: 'active'
+                status: 'active',
+                submitted_by: sub.submitted_by,
+                submitted_date: sub.submitted_date
             };
             activeInstruments.push(newInst);
 
@@ -970,7 +989,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         const subIndex = pendingSubmissions.findIndex(s => s.id === id);
         if (subIndex > -1) {
             const sub = pendingSubmissions[subIndex];
-
+            
             // Remove from pending
             pendingSubmissions.splice(subIndex, 1);
 
@@ -991,14 +1010,8 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
 
     // Helper to generate and download mock ZIP binary
     function downloadMockFile(id, version, title) {
-        const mockZipContent = "PK\x03\x04\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0e\x00\t\x00metadata.json" + JSON.stringify({
-            id,
-            version,
-            title
-        }, null, 2);
-        const blob = new Blob([mockZipContent], {
-            type: "application/zip"
-        });
+        const mockZipContent = "PK\x03\x04\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0e\x00\t\x00metadata.json" + JSON.stringify({id, version, title}, null, 2);
+        const blob = new Blob([mockZipContent], { type: "application/zip" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -1023,21 +1036,14 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     // Helper: Map field types to CSS badges
     function getBadgeTypeClass(type) {
         switch (type.toLowerCase()) {
-            case 'text':
-                return 'type-text';
+            case 'text': return 'type-text';
             case 'date':
-            case 'datetime':
-                return 'type-date';
-            case 'radio':
-                return 'type-radio';
-            case 'checkbox':
-                return 'type-checkbox';
-            case 'dropdown':
-                return 'type-dropdown';
-            case 'calc':
-                return 'type-calc';
-            default:
-                return 'bg-secondary text-white';
+            case 'datetime': return 'type-date';
+            case 'radio': return 'type-radio';
+            case 'checkbox': return 'type-checkbox';
+            case 'dropdown': return 'type-dropdown';
+            case 'calc': return 'type-calc';
+            default: return 'bg-secondary text-white';
         }
     }
 

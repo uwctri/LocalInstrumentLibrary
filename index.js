@@ -671,12 +671,9 @@ function installInstrument(buttonEl, instId) {
     btn.prop("disabled", true)
         .html('<i class="fa-solid fa-spinner fa-spin me-2"></i>Installing...');
 
-    // Make AJAX call to save install status in project setting
-    $.ajax({
-        url: window.location.href + "&action=install&id=" + encodeURIComponent(instId),
-        type: "GET",
-        dataType: "json",
-        success: function (response) {
+    // Make AJAX call to save install status in project setting using module.ajax
+    module.ajax('install', { id: instId })
+        .then(function (response) {
             if (response && response.status === "success") {
                 const data = instrumentFields[instId];
                 if (data) {
@@ -707,18 +704,17 @@ function installInstrument(buttonEl, instId) {
             } else {
                 btn.prop("disabled", false).html('<i class="fa-solid fa-download me-2"></i>Install to Project');
                 const errMsg = (response && response.message) ? response.message : "Failed to install instrument. Please try again.";
-                showToast(errMsg);
+                showToast(errMsg, true);
             }
-        },
-        error: function (xhr) {
+        })
+        .catch(function (xhr) {
             btn.prop("disabled", false).html('<i class="fa-solid fa-download me-2"></i>Install to Project');
             let errMsg = "Failed to install instrument due to network error.";
             if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
                 errMsg = xhr.responseJSON.message;
             }
-            showToast(errMsg);
-        }
-    });
+            showToast(errMsg, true);
+        });
 }
 
 // Removal Flow (Uninstall)
@@ -730,11 +726,8 @@ function removeInstrument(instId) {
     btn.prop("disabled", true)
         .html('<i class="fa-solid fa-spinner fa-spin me-2"></i>Removing...');
 
-    $.ajax({
-        url: window.location.href + "&action=uninstall&id=" + encodeURIComponent(instId),
-        type: "GET",
-        dataType: "json",
-        success: function (response) {
+    module.ajax('uninstall', { id: instId })
+        .then(function (response) {
             if (response && response.status === "success") {
                 const data = instrumentFields[instId];
                 if (data) {
@@ -759,25 +752,39 @@ function removeInstrument(instId) {
                 if (installedCount > 0) {
                     installedCount--;
                 }
-                $("#stat-installed").text(installedCount + " Installed in Project");
+                $("#stat-installed").text(installedCount + " Installed");
 
                 // Trigger Success Toast
                 showToast("'" + (data ? data.title : "Instrument") + "' successfully removed from this project!");
             } else {
                 btn.prop("disabled", true).html('<i class="fa-solid fa-check me-2"></i>Installed');
-                showToast("Failed to remove instrument. Please try again.");
+                const errMsg = (response && response.message) ? response.message : "Failed to remove instrument. Please try again.";
+                showToast(errMsg, true);
             }
-        },
-        error: function () {
+        })
+        .catch(function (xhr) {
             btn.prop("disabled", true).html('<i class="fa-solid fa-check me-2"></i>Installed');
-            showToast("Failed to remove instrument due to network error.");
-        }
-    });
+            let errMsg = "Failed to remove instrument due to network error.";
+            if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                errMsg = xhr.responseJSON.message;
+            }
+            showToast(errMsg, true);
+        });
 }
 
 // Toast notification display helper
-function showToast(message) {
+function showToast(message, isError = false) {
     const toast = $("#lib-toast");
+    const icon = toast.find("i");
+    
+    if (isError) {
+        icon.removeClass("fa-circle-check text-success success-icon")
+            .addClass("fa-circle-xmark text-danger");
+    } else {
+        icon.removeClass("fa-circle-xmark text-danger")
+            .addClass("fa-circle-check text-success");
+    }
+
     $("#toast-message").text(message);
     toast.addClass("show");
 
