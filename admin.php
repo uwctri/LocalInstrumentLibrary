@@ -1,4 +1,5 @@
 <?php
+
 /** @var \UWMadison\LocalInstrumentLibrary\LocalInstrumentLibrary $module */
 
 // Protect page from non-admin users (ControlCenter/header.php automatically does this, but it's good practice)
@@ -123,7 +124,11 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     <?= $dynamic_category_styles ?>
 
     /* Force full-width container overrides on REDCap layout */
-    #center, #pagecontainer, .col-md-9, #sub-viewport, .viewport {
+    #center,
+    #pagecontainer,
+    .col-md-9,
+    #sub-viewport,
+    .viewport {
         max-width: 100% !important;
         width: 100% !important;
     }
@@ -143,26 +148,36 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
 
     /* Tabs styling overrides */
     #local-instrument-lib-admin-container .nav-tabs-custom {
-        border-bottom: 2px solid #e2e8f0;
+        border-bottom: 2px solid #cbd5e1;
     }
 
     #local-instrument-lib-admin-container .nav-tabs-custom .nav-link {
-        border: none;
+        border: none !important;
         color: #64748b;
         font-weight: 600;
         padding: 0.8rem 1.5rem;
         position: relative;
         transition: color 0.2s;
+        box-shadow: none !important;
+        outline: none !important;
     }
 
-    #local-instrument-lib-admin-container .nav-tabs-custom .nav-link:hover {
+    #local-instrument-lib-admin-container .nav-tabs-custom .nav-link:hover,
+    #local-instrument-lib-admin-container .nav-tabs-custom .nav-link:focus,
+    #local-instrument-lib-admin-container .nav-tabs-custom .nav-link:active {
         color: #0f172a;
-        background: none;
+        background: none !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
     }
 
     #local-instrument-lib-admin-container .nav-tabs-custom .nav-link.active {
         color: #4f46e5;
-        background: none;
+        background: none !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
     }
 
     #local-instrument-lib-admin-container .nav-tabs-custom .nav-link.active::after {
@@ -173,6 +188,11 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         right: 0;
         height: 2px;
         background-color: #4f46e5;
+    }
+
+    #adminTabsContent {
+        padding: 0 !important;
+        border: none !important;
     }
 
     /* Premium Custom Table styling */
@@ -307,7 +327,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     }
 
     /* Custom Category Checkbox styling (matches submission form size & padding) */
-    .edit-cat-checkbox:checked + label {
+    .edit-cat-checkbox:checked+label {
         background-color: #eff6ff !important;
         border-color: #3b82f6 !important;
         color: #1d4ed8 !important;
@@ -315,7 +335,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     }
 </style>
 
-<div id="local-instrument-lib-admin-container" class="container-fluid py-4 px-0">
+<div id="local-instrument-lib-admin-container" class="container-fluid px-0">
     <!-- Header Banner -->
     <div class="admin-header p-4 p-md-5 mb-4 text-white position-relative shadow-sm">
         <h2 class="display-6 fw-bold mb-2" style="font-family: 'Outfit', sans-serif;">Instrument Library Administration</h2>
@@ -324,8 +344,16 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         </p>
     </div>
 
-    <!-- Toolbar & Tab Navigation -->
-    <div class="bg-white p-3 rounded-3 border shadow-sm mb-4">
+    <!-- Search bar (outside the cards, flat on background) -->
+    <div class="mb-4">
+        <div class="position-relative">
+            <i class="fas fa-search position-absolute start-0 top-50 translate-middle-y ms-3 text-muted"></i>
+            <input type="text" id="admin-search" class="form-control ps-5 py-2 border-secondary border-opacity-25 bg-light shadow-sm" placeholder="Search instruments by ID, title, author, submitter, or description...">
+        </div>
+    </div>
+
+    <!-- Navigation Tabs (flat on background, controls inner content) -->
+    <div class="mb-4">
         <ul class="nav nav-tabs nav-tabs-custom mb-3 border-0" id="adminTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active d-flex align-items-center" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-pane" type="button" role="tab" aria-controls="active-pane" aria-selected="true">
@@ -340,19 +368,11 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
             </li>
         </ul>
 
-        <!-- Filter Active Library -->
+        <!-- Tab Content -->
         <div class="tab-content" id="adminTabsContent">
             <!-- Active Library Tab -->
             <div class="tab-pane fade show active" id="active-pane" role="tabpanel" aria-labelledby="active-tab">
-                <div class="d-flex gap-3 align-items-center mb-3 flex-wrap">
-                    <div class="flex-grow-1" style="min-width: 250px;">
-                        <div class="position-relative">
-                            <i class="fas fa-search position-absolute start-0 top-50 translate-middle-y ms-3 text-muted"></i>
-                            <input type="text" id="admin-search" class="form-control ps-5 py-2 border-secondary border-opacity-25 bg-light" placeholder="Search by instrument ID, title, author or description...">
-                        </div>
-                    </div>
-                </div>
-
+                <!-- Inner table card wrapper restored, table wraps in its own clean card box -->
                 <div class="border rounded-3 overflow-hidden bg-white shadow-sm">
                     <table class="table-custom" id="active-library-table">
                         <thead>
@@ -369,11 +389,11 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                             <!-- Populated dynamically via JavaScript -->
                         </tbody>
                     </table>
-                    <div class="text-center py-5 text-secondary d-none" id="active-empty-state">
-                        <i class="fas fa-folder-open display-4 mb-3 text-muted opacity-50"></i>
-                        <h3 class="h5 text-dark fw-semibold mb-1">No instruments found</h3>
-                        <p class="text-muted small">Try refining your search term.</p>
-                    </div>
+                </div>
+                <div class="text-center py-5 text-secondary d-none bg-white border rounded-3 shadow-sm" id="active-empty-state">
+                    <i class="fas fa-folder-open display-4 mb-3 text-muted opacity-50"></i>
+                    <h3 class="h5 text-dark fw-semibold mb-1">No instruments found</h3>
+                    <p class="text-muted small">Try refining your search term.</p>
                 </div>
             </div>
 
@@ -382,7 +402,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                 <div class="row g-4" id="pending-submissions-container">
                     <!-- Populated dynamically via JavaScript -->
                 </div>
-                <div class="text-center py-5 text-secondary d-none" id="pending-empty-state">
+                <div class="text-center py-5 text-secondary d-none bg-white border rounded-3 shadow-sm" id="pending-empty-state">
                     <i class="fas fa-check-circle display-4 mb-3 text-success opacity-75"></i>
                     <h3 class="h5 text-dark fw-semibold mb-1">All submissions moderated</h3>
                     <p class="text-muted small mb-0">No new submissions require review at this time.</p>
@@ -397,7 +417,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header bg-light border-bottom px-4 py-3">
-                <h3 class="modal-title h5 fw-bold text-dark m-0" id="preview-modal-label">
+                <h3 class="modal-title m-0 h5 fw-bold text-dark" id="preview-modal-label">
                     <i class="fas fa-search me-2 text-primary"></i>
                     Instrument Preview
                 </h3>
@@ -453,7 +473,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header bg-light border-bottom px-4 py-3">
-                <h3 class="modal-title h5 fw-bold text-dark m-0" id="edit-modal-label">
+                <h3 class="modal-title m-0 h5 fw-bold text-dark" id="edit-modal-label">
                     <i class="fas fa-edit me-2 text-primary"></i>
                     Edit Instrument Metadata
                 </h3>
@@ -463,7 +483,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                 <form id="edit-instrument-form" novalidate>
                     <input type="hidden" id="edit-id">
                     <input type="hidden" id="edit-type">
-                    
+
                     <div class="mb-3">
                         <label for="edit-title" class="form-label small fw-bold text-secondary mb-1">Instrument Title</label>
                         <input type="text" class="form-control border-secondary border-opacity-25 py-2" id="edit-title" required>
@@ -545,13 +565,18 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     let pendingSubmissions = <?= json_encode(array_values($dummy_submissions)); ?>;
     let previewModalObj, editModalObj;
 
-    $(document).ready(function () {
+    $(document).ready(function() {
         previewModalObj = new bootstrap.Modal(document.getElementById('preview-modal'));
         editModalObj = new bootstrap.Modal(document.getElementById('edit-modal'));
 
-        // Bind Search
+        // Bind Search to update active view dynamically
         $("#admin-search").on("input", function() {
-            renderActiveLibrary();
+            triggerCurrentFilter();
+        });
+
+        // Listen for tab switches to re-apply the search filter
+        $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
+            triggerCurrentFilter();
         });
 
         // Initialize lists
@@ -573,7 +598,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         // Edit form submission
         $("#edit-instrument-form").on("submit", function(e) {
             e.preventDefault();
-            
+
             // Validate checkboxes
             const selectedCats = [];
             $(".edit-cat-checkbox:checked").each(function() {
@@ -633,6 +658,16 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         });
     });
 
+    // Helper to filter currently active tab
+    function triggerCurrentFilter() {
+        const activeTab = $("#adminTabs .nav-link.active").attr("id");
+        if (activeTab === "active-tab") {
+            renderActiveLibrary();
+        } else {
+            renderPendingSubmissions();
+        }
+    }
+
     // Render Active Library Table
     function renderActiveLibrary() {
         const tbody = $("#active-library-tbody");
@@ -640,7 +675,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         tbody.empty();
 
         let filtered = activeInstruments.filter(inst => {
-            const matchSearch = 
+            const matchSearch =
                 inst.id.toLowerCase().includes(query) ||
                 inst.title.toLowerCase().includes(query) ||
                 inst.description.toLowerCase().includes(query) ||
@@ -653,12 +688,12 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         $("#active-count").text(activeInstruments.length);
 
         if (filtered.length === 0) {
-            $("#active-library-table").addClass("d-none");
+            $("#active-library-table").parent().addClass("d-none");
             $("#active-empty-state").removeClass("d-none");
             return;
         }
 
-        $("#active-library-table").removeClass("d-none");
+        $("#active-library-table").parent().removeClass("d-none");
         $("#active-empty-state").addClass("d-none");
 
         filtered.forEach(inst => {
@@ -711,9 +746,9 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
 
             // Status Badge
             const isHidden = inst.status === 'hidden';
-            const statusBadge = isHidden 
-                ? `<span class="badge-status badge-status-hidden"><i class="fas fa-eye-slash"></i> Hidden</span>`
-                : `<span class="badge-status badge-status-active"><i class="fas fa-check-circle"></i> Active</span>`;
+            const statusBadge = isHidden ?
+                `<span class="badge-status badge-status-hidden"><i class="fas fa-eye-slash"></i> Hidden</span>` :
+                `<span class="badge-status badge-status-active"><i class="fas fa-check-circle"></i> Active</span>`;
 
             const hideText = isHidden ? "Unhide" : "Hide";
             const hideIcon = isHidden ? "fa-eye" : "fa-eye-slash";
@@ -769,22 +804,32 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     // Render Pending Submissions
     function renderPendingSubmissions() {
         const container = $("#pending-submissions-container");
+        const query = $("#admin-search").val().toLowerCase().trim();
         container.empty();
+
+        let filtered = pendingSubmissions.filter(sub => {
+            const matchSearch =
+                sub.id.toLowerCase().includes(query) ||
+                sub.title.toLowerCase().includes(query) ||
+                sub.description.toLowerCase().includes(query) ||
+                sub.author_name.toLowerCase().includes(query) ||
+                (sub.submitted_by && sub.submitted_by.toLowerCase().includes(query)) ||
+                (sub.categories && sub.categories.some(c => c.toLowerCase().includes(query)));
+            return matchSearch;
+        });
 
         $("#pending-badge").text(pendingSubmissions.length);
 
-        if (pendingSubmissions.length === 0) {
-            $("#pending-badge").addClass("d-none");
+        if (filtered.length === 0) {
             container.addClass("d-none");
             $("#pending-empty-state").removeClass("d-none");
             return;
         }
 
-        $("#pending-badge").removeClass("d-none");
         container.removeClass("d-none");
         $("#pending-empty-state").addClass("d-none");
 
-        pendingSubmissions.forEach(sub => {
+        filtered.forEach(sub => {
             // Generate Categories Badges
             let catBadges = "";
             sub.categories.forEach(cat => {
@@ -953,10 +998,10 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         const subIndex = pendingSubmissions.findIndex(s => s.id === id);
         if (subIndex > -1) {
             const sub = pendingSubmissions[subIndex];
-            
+
             // Remove from pending
             pendingSubmissions.splice(subIndex, 1);
-            
+
             // Transform and add to active (simulate approval)
             const newInst = {
                 id: sub.id,
@@ -989,7 +1034,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         const subIndex = pendingSubmissions.findIndex(s => s.id === id);
         if (subIndex > -1) {
             const sub = pendingSubmissions[subIndex];
-            
+
             // Remove from pending
             pendingSubmissions.splice(subIndex, 1);
 
@@ -1010,8 +1055,14 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
 
     // Helper to generate and download mock ZIP binary
     function downloadMockFile(id, version, title) {
-        const mockZipContent = "PK\x03\x04\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0e\x00\t\x00metadata.json" + JSON.stringify({id, version, title}, null, 2);
-        const blob = new Blob([mockZipContent], { type: "application/zip" });
+        const mockZipContent = "PK\x03\x04\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0e\x00\t\x00metadata.json" + JSON.stringify({
+            id,
+            version,
+            title
+        }, null, 2);
+        const blob = new Blob([mockZipContent], {
+            type: "application/zip"
+        });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -1036,14 +1087,21 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     // Helper: Map field types to CSS badges
     function getBadgeTypeClass(type) {
         switch (type.toLowerCase()) {
-            case 'text': return 'type-text';
+            case 'text':
+                return 'type-text';
             case 'date':
-            case 'datetime': return 'type-date';
-            case 'radio': return 'type-radio';
-            case 'checkbox': return 'type-checkbox';
-            case 'dropdown': return 'type-dropdown';
-            case 'calc': return 'type-calc';
-            default: return 'bg-secondary text-white';
+            case 'datetime':
+                return 'type-date';
+            case 'radio':
+                return 'type-radio';
+            case 'checkbox':
+                return 'type-checkbox';
+            case 'dropdown':
+                return 'type-dropdown';
+            case 'calc':
+                return 'type-calc';
+            default:
+                return 'bg-secondary text-white';
         }
     }
 
