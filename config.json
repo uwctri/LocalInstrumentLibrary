@@ -17,5 +17,14 @@
             "type": "text",
             "repeatable": true
         }
-    ]
+    ],
+    "links": {
+        "control-center": [
+            {
+                "name": "Local Instrument Library Admin",
+                "icon": "fas fa-cogs",
+                "url": "admin.php"
+            }
+        ]
+    }
 }

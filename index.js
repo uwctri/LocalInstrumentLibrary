@@ -620,7 +620,7 @@ function openPreview(instId) {
     } else {
         modalInstallBtn.removeClass("is-installed")
             .prop("disabled", false)
-            .html('<i class="fa-solid fa-download me-2"></i>Install')
+            .html('<i class="fa-solid fa-download me-2"></i>Install to Project')
             .off("click")
             .on("click", function () {
                 previewModal.hide();
@@ -705,13 +705,18 @@ function installInstrument(buttonEl, instId) {
                 // Trigger Success Toast
                 showToast("'" + (data ? data.title : "Instrument") + "' successfully installed to this project!");
             } else {
-                btn.prop("disabled", false).html('<i class="fa-solid fa-download me-2"></i>Install');
-                showToast("Failed to install instrument. Please try again.");
+                btn.prop("disabled", false).html('<i class="fa-solid fa-download me-2"></i>Install to Project');
+                const errMsg = (response && response.message) ? response.message : "Failed to install instrument. Please try again.";
+                showToast(errMsg);
             }
         },
-        error: function () {
-            btn.prop("disabled", false).html('<i class="fa-solid fa-download me-2"></i>Install');
-            showToast("Failed to install instrument due to network error.");
+        error: function (xhr) {
+            btn.prop("disabled", false).html('<i class="fa-solid fa-download me-2"></i>Install to Project');
+            let errMsg = "Failed to install instrument due to network error.";
+            if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                errMsg = xhr.responseJSON.message;
+            }
+            showToast(errMsg);
         }
     });
 }
@@ -748,7 +753,7 @@ function removeInstrument(instId) {
                 btn.removeClass("is-installed")
                     .removeClass("btn-success")
                     .addClass("btn-primary")
-                    .html('<i class="fa-solid fa-download me-2"></i>Install')
+                    .html('<i class="fa-solid fa-download me-2"></i>Install to Project')
                     .prop("disabled", false);
 
                 if (installedCount > 0) {

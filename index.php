@@ -6,25 +6,136 @@
 if (isset($_GET['action']) && isset($_GET['id'])) {
     $action = $_GET['action'];
     $inst_id = $_GET['id'];
-    $installed_instruments = $module->getProjectSetting('installed_instruments');
-    if ($installed_instruments === null) {
-        $installed_instruments = ['standard_demographics'];
+    $project_id = $module->getProjectId();
+    
+    // Load dummy data
+    require_once __DIR__ . '/dummy_data.php';
+    
+    // Find target instrument details
+    $target_inst = null;
+    foreach ($instruments as $inst) {
+        if ($inst['id'] === $inst_id) {
+            $target_inst = $inst;
+            break;
+        }
     }
-
+    
+    if (!$target_inst) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Instrument not found in library.']);
+        exit;
+    }
+    
+    // Get existing instrument names and field names using REDCap APIs (SQL-free)
+    $all_instruments = REDCap::getInstrumentNames();
+    $all_fields = REDCap::getFieldNames();
+    
     if ($action === 'install') {
+        $errors = [];
+        
+        // 1. Check if an instrument with the same name already exists in the project
+        if (isset($all_instruments[$inst_id])) {
+            $errors[] = "An instrument named '$inst_id' already exists in this project.";
+        }
+        
+        // 2. Check if there is an overlap with any field names
+        $overlapping_fields = [];
+        foreach ($target_inst['fields'] as $field) {
+            $var = $field['variable'];
+            if (in_array($var, $all_fields)) {
+                $overlapping_fields[] = $var;
+            }
+        }
+        if (!empty($overlapping_fields)) {
+            $errors[] = "The following field names already exist in this project: " . implode(', ', $overlapping_fields) . ".";
+        }
+        
+        if (!empty($errors)) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 'error',
+                'message' => "Cannot install. " . implode(' ', $errors)
+            ]);
+            exit;
+        }
+        
+        // 3. No issue: Get current data dictionary, append a placeholder descriptive field, and save it
+        $current_dd = REDCap::getDataDictionary('array');
+        
+        $placeholder_field = $inst_id . "_placeholder";
+        $new_field = [
+            "field_name" => $placeholder_field,
+            "form_name" => $inst_id,
+            "section_header" => "",
+            "field_type" => "descriptive",
+            "field_label" => "Start of instrument: " . $target_inst['title'],
+            "select_choices_or_calculations" => "",
+            "field_note" => "",
+            "text_validation_type_or_show_slider_number" => "",
+            "text_validation_min" => "",
+            "text_validation_max" => "",
+            "identifier" => "",
+            "branching_logic" => "",
+            "required_field" => "",
+            "custom_alignment" => "",
+            "question_number" => "",
+            "matrix_group_name" => "",
+            "matrix_ranking" => "",
+            "field_annotation" => ""
+        ];
+        
+        $current_dd[] = $new_field;
+        
+        // Save the updated data dictionary using REDCap's metadata save utility
+        list($fieldCount, $saveErrors) = MetaData::saveMetadataFlat($current_dd);
+        
+        if (!empty($saveErrors)) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Failed to save metadata: ' . implode(' ', (array)$saveErrors)
+            ]);
+            exit;
+        }
+        
+        // Save installed status in project setting
+        $installed_instruments = $module->getProjectSetting('installed_instruments');
+        if ($installed_instruments === null) {
+            $installed_instruments = ['standard_demographics'];
+        }
         if (!in_array($inst_id, $installed_instruments)) {
             $installed_instruments[] = $inst_id;
             $module->setProjectSetting('installed_instruments', $installed_instruments);
         }
+        
         header('Content-Type: application/json');
         echo json_encode(['status' => 'success', 'installed' => $installed_instruments]);
         exit;
+        
     } elseif ($action === 'uninstall') {
+        // Retrieve current data dictionary, prune the target form's fields, and save
+        $current_dd = REDCap::getDataDictionary('array');
+        
+        $new_dd = [];
+        foreach ($current_dd as $field) {
+            if ($field['form_name'] !== $inst_id) {
+                $new_dd[] = $field;
+            }
+        }
+        
+        // Save updated data dictionary
+        list($fieldCount, $saveErrors) = MetaData::saveMetadataFlat($new_dd);
+        
+        $installed_instruments = $module->getProjectSetting('installed_instruments');
+        if ($installed_instruments === null) {
+            $installed_instruments = ['standard_demographics'];
+        }
         if (($key = array_search($inst_id, $installed_instruments)) !== false) {
             unset($installed_instruments[$key]);
             $installed_instruments = array_values($installed_instruments);
             $module->setProjectSetting('installed_instruments', $installed_instruments);
         }
+        
         header('Content-Type: application/json');
         echo json_encode(['status' => 'success', 'installed' => $installed_instruments]);
         exit;
