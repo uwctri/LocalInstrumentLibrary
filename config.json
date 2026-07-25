@@ -1,0 +1,21 @@
+{
+    "name": "Local Instrument Library",
+    "description": "Share instruments internal to your organization easily.",
+    "namespace": "UWMadison\\LocalInstrumentLibrary",
+    "authors": [
+        {
+            "name": "Adam Nunez",
+            "email": "Adam.Nunez@ctri.wisc.edu",
+            "institution": "UW Madison - Center for Tobacco Research and Intervention"
+        }
+    ],
+    "framework-version": 17,
+    "system-settings": [
+        {
+            "key": "categories",
+            "name": "Library Categories",
+            "type": "text",
+            "repeatable": true
+        }
+    ]
+}
