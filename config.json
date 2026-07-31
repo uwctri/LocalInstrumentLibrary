@@ -12,7 +12,8 @@
     "framework-version": 17,
     "auth-ajax-actions": [
         "install",
-        "uninstall"
+        "uninstall",
+        "submit"
     ],
     "system-settings": [
         {

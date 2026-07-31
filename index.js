@@ -5,6 +5,10 @@ let submitModal;
 // Active Category selections (Multi-select)
 let selectedCategories = ["All"];
 
+// Pagination State
+let currentPage = 1;
+const itemsPerPage = 6;
+
 $(document).ready(function () {
     // Instantiate the Bootstrap 5 Modals
     previewModal = new bootstrap.Modal(document.getElementById('preview-modal'));
@@ -12,7 +16,15 @@ $(document).ready(function () {
 
     // 1. Search Functionality
     $("#lib-search").on("input", function () {
+        currentPage = 1;
         filterGrid();
+    });
+
+    // Pagination controls event binding
+    $("#pagination-controls").on("click", ".page-item:not(.disabled):not(.active)", function () {
+        currentPage = $(this).data("page");
+        filterGrid();
+        $("html, body").animate({ scrollTop: $("#instruments-grid").offset().top - 20 }, 200);
     });
 
     // 2. Custom Category Filter Dropdown Functionality
@@ -29,9 +41,8 @@ $(document).ready(function () {
 
     // Click outside closes the dropdown menu
     $(document).on("click", function (e) {
-        if (!$(e.target).closest(".category-select-wrapper").length) {
+        if (!$(e.target).closest(".category-select-wrapper").length)
             $("#category-dropdown-menu").addClass("d-none");
-        }
     });
 
     // Search Input Filtering Categories
@@ -102,6 +113,7 @@ $(document).ready(function () {
 
         // Sync with hidden input
         $("#lib-category-select").val(selectedCategories.join(","));
+        currentPage = 1;
         // Filter grid
         filterGrid();
     });
@@ -166,16 +178,14 @@ $(document).ready(function () {
     function getREDCapAdminDomain() {
         try {
             let contactLink = $("#west a:contains('Contact'), #west a:contains('contact')").first().attr("href");
-            if (!contactLink) {
+            if (!contactLink)
                 contactLink = $("a[href^='mailto:']").first().attr("href");
-            }
             if (contactLink && contactLink.indexOf('@') !== -1) {
                 let emailPart = contactLink.split(':')[1] || '';
                 emailPart = emailPart.split('?')[0]; // remove query parameters
                 let domain = emailPart.split('@')[1];
-                if (domain) {
+                if (domain)
                     return domain.trim().toLowerCase();
-                }
             }
         } catch (e) {
             console.error("Error retrieving REDCap admin domain:", e);
@@ -446,11 +456,10 @@ $(document).ready(function () {
         // Version semantic validation (enforced for both types)
         let isVersionValid = validateVersionInput();
 
-        if (!isFormValid || !isCategoryChecked || !isTabValid || !isExistingValid || !isVersionValid) {
+        if (!isFormValid || !isCategoryChecked || !isTabValid || !isExistingValid || !isVersionValid)
             return;
-        }
 
-        // Trigger simulated submitting loader state
+        // Trigger submitting loader state
         const submitBtn = $("#submit-form-btn");
         submitBtn.prop("disabled", true)
             .html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting...');
@@ -458,57 +467,103 @@ $(document).ready(function () {
         // Disable all fields
         $(form).find("input, select, textarea, button").prop("disabled", true);
 
-        setTimeout(function () {
-            // Get title text for toast (cleaning current version wrapper if update)
-            const titleText = subType === "update" ?
-                $("#submit-existing-instrument option:selected").text().replace(/\s*\(v.*\)/i, '') :
-                titleInput.val();
+        // Get title text
+        const titleText = subType === "update" ?
+            $("#submit-existing-instrument option:selected").text().replace(/\s*\(v.*\)/i, '') :
+            titleInput.val();
 
-            // Hide Modal
-            submitModal.hide();
+        // Extract selected categories
+        const categories = [];
+        $(".submit-cat-checkbox:checked").each(function () {
+            categories.push($(this).val());
+        });
 
-            // Re-enable form fields for future submissions
-            $(form).find("input, select, textarea, button").prop("disabled", false);
-            submitBtn.html('<i class="fa-solid fa-paper-plane"></i><span>Submit Request</span>');
-            $(form).removeClass("was-validated");
+        const payload = {
+            subType: subType,
+            type: activeTab,
+            title: titleText,
+            description: descInput.val(),
+            author_name: authorNameInput.val(),
+            author_email: authorEmailInput.val(),
+            version: $("#submit-version").val(),
+            time: $("#submit-time").val(),
+            categories: categories,
+            existingId: existingInstrumentSelect.val()
+        };
 
-            // Reset fields
-            form.reset();
-            attachedFile = null;
-            uploadStatus.addClass("d-none");
-            dropZone.find("i").removeClass("fa-file-zipper").addClass("fa-cloud-arrow-up");
+        const performSubmit = function(payloadData) {
+            module.ajax('submit', payloadData).then(function (response) {
+                // Re-enable form fields
+                $(form).find("input, select, textarea, button").prop("disabled", false);
+                submitBtn.html('<i class="fa-solid fa-paper-plane"></i><span>Submit Request</span>');
 
-            // Reset categories validation styles
-            $(".submit-cat-checkbox").closest(".p-3").removeClass("border-danger");
-            categoriesInvalidMsg.addClass("d-none");
+                let data;
+                try {
+                    data = typeof response === "string" ? JSON.parse(response) : response;
+                } catch (e) {
+                    data = response;
+                }
 
-            // Reset dropzone red invalid validation styles
-            dropZone.removeClass("border-danger").css("border-color", "");
-            fileInvalidMsg.addClass("d-none");
+                if (data && data.status === 'success') {
+                    submitModal.hide();
+                    $(form).removeClass("was-validated");
+                    form.reset();
+                    attachedFile = null;
+                    uploadStatus.addClass("d-none");
+                    dropZone.find("i").removeClass("fa-file-zipper").addClass("fa-cloud-arrow-up");
 
-            projectInstrumentSelect.prop("disabled", true).removeClass("is-invalid");
+                    // Reset validation styles
+                    $(".submit-cat-checkbox").closest(".p-3").removeClass("border-danger");
+                    categoriesInvalidMsg.addClass("d-none");
+                    dropZone.removeClass("border-danger").css("border-color", "");
+                    fileInvalidMsg.addClass("d-none");
 
-            // Reset Existing Instrument dropdown slide & title input state
-            $("#existing-instrument-wrapper").hide();
-            $("#submit-title-wrapper").show();
-            titleInput.prop("required", true);
-            existingInstrumentSelect.prop("required", false).prop("disabled", true).removeClass("is-invalid");
-            $("#version-current-info").addClass("d-none").text("");
+                    projectInstrumentSelect.prop("disabled", true).removeClass("is-invalid");
+                    $("#existing-instrument-wrapper").hide();
+                    $("#submit-title-wrapper").show();
+                    titleInput.prop("required", true);
+                    existingInstrumentSelect.prop("required", false).prop("disabled", true).removeClass("is-invalid");
+                    $("#version-current-info").addClass("d-none").text("");
 
-            // Select first tab by default
-            const zipTabTrigger = document.querySelector('#zip-tab');
-            if (zipTabTrigger) {
-                const tab = new bootstrap.Tab(zipTabTrigger);
-                tab.show();
-            }
+                    // Select first tab
+                    const zipTabTrigger = document.querySelector('#zip-tab');
+                    if (zipTabTrigger) {
+                        const tab = new bootstrap.Tab(zipTabTrigger);
+                        tab.show();
+                    }
 
-            // Trigger Toast success confirmation
-            const msg = subType === "update" ?
-                "Thank you! Your update request for instrument '" + titleText + "' has been submitted." :
-                "Thank you! Your instrument '" + titleText + "' has been submitted for approval.";
-            showToast(msg);
-        }, 1800);
+                    // Reload page to reflect new uploaded instrument
+                    showToast(data.message || "Submission successful! Reloading...");
+                    setTimeout(function () {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    alert(data && data.message ? data.message : "An error occurred during submission.");
+                }
+            }).catch(function (error) {
+                $(form).find("input, select, textarea, button").prop("disabled", false);
+                submitBtn.html('<i class="fa-solid fa-paper-plane"></i><span>Submit Request</span>');
+                alert("AJAX request failed: " + error);
+            });
+        };
+
+        if (activeTab === "zip") {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const base64Data = event.target.result.split(',')[1];
+                payload.fileData = base64Data;
+                payload.fileName = attachedFile.name;
+                performSubmit(payload);
+            };
+            reader.readAsDataURL(attachedFile);
+        } else {
+            payload.instrumentName = projectInstrumentSelect.val();
+            performSubmit(payload);
+        }
     });
+
+    // Run filterGrid on initial page load to apply pagination
+    filterGrid();
 });
 
 function updateDropdownTriggerLabel() {
@@ -526,36 +581,76 @@ function updateDropdownTriggerLabel() {
 // Primary filter function combining search input + category dropdown selection
 function filterGrid() {
     const query = $("#lib-search").val().toLowerCase().trim();
-    let visibleCount = 0;
+    const matchingCards = [];
 
     $(".instrument-card-col").each(function () {
         const cardTitle = $(this).data("title").toLowerCase();
         const cardDesc = $(this).data("desc").toLowerCase();
-
-        // Get comma-separated list of categories from data-categories attribute
         const cardCats = ($(this).data("categories") || "").split(",");
 
         const matchesQuery = query === "" || cardTitle.includes(query) || cardDesc.includes(query);
-
-        // Check if selectedCategories contains "All" OR intersects with cardCats
         const matchesCategory = selectedCategories.includes("All") || cardCats.some(cat => selectedCategories.includes(cat));
 
         if (matchesQuery && matchesCategory) {
-            $(this).fadeIn(200);
-            visibleCount++;
+            matchingCards.push($(this));
         } else {
-            $(this).fadeOut(200);
+            $(this).hide();
         }
     });
 
-    // Show empty state if no instruments match filters
-    if (visibleCount === 0) {
+    const totalItems = matchingCards.length;
+
+    if (totalItems === 0) {
         $("#instruments-grid").hide();
+        $("#lib-pagination-container").hide();
         $("#lib-empty").fadeIn(200);
-    } else {
-        $("#lib-empty").hide();
-        $("#instruments-grid").show();
+        return;
     }
+
+    $("#lib-empty").hide();
+    $("#instruments-grid").show();
+
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    if (currentPage > totalPages) {
+        currentPage = Math.max(1, totalPages);
+    }
+
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+    matchingCards.forEach(function ($card, index) {
+        if (index >= startIndex && index < endIndex) {
+            $card.show();
+        } else {
+            $card.hide();
+        }
+    });
+
+    renderPagination(totalItems, totalPages, startIndex, endIndex);
+}
+
+function renderPagination(totalItems, totalPages, startIndex, endIndex) {
+    if (totalPages <= 1) {
+        $("#lib-pagination-container").hide();
+        return;
+    }
+    $("#lib-pagination-container").show();
+
+    $("#pagination-info").text(`Showing ${startIndex + 1}-${endIndex} of ${totalItems} instruments`);
+
+    const controls = $("#pagination-controls");
+    controls.empty();
+
+    const prevClass = currentPage === 1 ? "disabled" : "";
+    controls.append(`<li class="page-item ${prevClass}" data-page="${currentPage - 1}"><span class="page-link">&laquo; Prev</span></li>`);
+
+    for (let p = 1; p <= totalPages; p++) {
+        const activeClass = p === currentPage ? "active" : "";
+        controls.append(`<li class="page-item ${activeClass}" data-page="${p}"><span class="page-link">${p}</span></li>`);
+    }
+
+    const nextClass = currentPage === totalPages ? "disabled" : "";
+    controls.append(`<li class="page-item ${nextClass}" data-page="${currentPage + 1}"><span class="page-link">Next &raquo;</span></li>`);
 }
 
 // Preview Modal Control
@@ -637,20 +732,34 @@ function openPreview(instId) {
     modalDownloadBtn.off("click").on("click", function (e) {
         e.preventDefault();
 
-        // Create a mock blob containing fake zip binary data representing instrument metadata
-        const mockZipContent = "PK\x03\x04\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0e\x00\t\x00metadata.json" + JSON.stringify(data, null, 2);
-        const blob = new Blob([mockZipContent], { type: "application/zip" });
-        const url = URL.createObjectURL(blob);
+        // Get doc_id from latest version
+        let docId = null;
+        if (data.versions && data.versions.length > 0) {
+            const latestVer = data.versions[data.versions.length - 1];
+            if (latestVer && latestVer.doc_id)
+                docId = latestVer.doc_id;
+        }
 
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = data.id + "_instrument.zip";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        // If it is a real numeric doc_id, stream the file from download.php
+        if (docId && /^\d+$/.test(docId)) {
+            window.location.href = module.getUrl('download.php') + '&doc_id=' + docId;
+            showToast("Starting download for '" + data.title + "'...");
+        } else {
+            // Otherwise, fall back to generating a mock zip file
+            const mockZipContent = "PK\x03\x04\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0e\x00\t\x00metadata.json" + JSON.stringify(data, null, 2);
+            const blob = new Blob([mockZipContent], { type: "application/zip" });
+            const url = URL.createObjectURL(blob);
 
-        showToast("Successfully downloaded ZIP package for '" + data.title + "'!");
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = data.id + "_instrument.zip";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast("Successfully downloaded ZIP package for '" + data.title + "'!");
+        }
     });
 
     // Show Bootstrap Modal
@@ -676,9 +785,8 @@ function installInstrument(buttonEl, instId) {
         .then(function (response) {
             if (response && response.status === "success") {
                 const data = instrumentFields[instId];
-                if (data) {
+                if (data)
                     data.installed = true;
-                }
 
                 // Add visual indicators to the card
                 const card = $(".instrument-card-col[data-id='" + instId + "'] .instrument-card");
@@ -686,9 +794,8 @@ function installInstrument(buttonEl, instId) {
 
                 // Add Installed Badge if it doesn't exist
                 const cardTop = $(".instrument-card-col[data-id='" + instId + "'] .card-top");
-                if (cardTop.find(".bg-success").length === 0) {
+                if (cardTop.find(".bg-success").length === 0)
                     cardTop.find(".d-flex").prepend('<span class="badge bg-success text-white px-2 py-1 fw-bold rounded-pill" style="font-size: 0.7rem;"><i class="fa-solid fa-circle-check me-1"></i>Installed</span>');
-                }
 
                 // Finalize button state on card
                 btn.addClass("is-installed")
@@ -710,9 +817,8 @@ function installInstrument(buttonEl, instId) {
         .catch(function (xhr) {
             btn.prop("disabled", false).html('<i class="fa-solid fa-download me-2"></i>Install to Project');
             let errMsg = "Failed to install instrument due to network error.";
-            if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+            if (xhr && xhr.responseJSON && xhr.responseJSON.message)
                 errMsg = xhr.responseJSON.message;
-            }
             showToast(errMsg, true);
         });
 }
@@ -730,9 +836,8 @@ function removeInstrument(instId) {
         .then(function (response) {
             if (response && response.status === "success") {
                 const data = instrumentFields[instId];
-                if (data) {
+                if (data)
                     data.installed = false;
-                }
 
                 // Remove visual indicators from the card
                 const card = $(".instrument-card-col[data-id='" + instId + "'] .instrument-card");
@@ -749,9 +854,8 @@ function removeInstrument(instId) {
                     .html('<i class="fa-solid fa-download me-2"></i>Install to Project')
                     .prop("disabled", false);
 
-                if (installedCount > 0) {
+                if (installedCount > 0)
                     installedCount--;
-                }
                 $("#stat-installed").text(installedCount + " Installed");
 
                 // Trigger Success Toast
@@ -765,9 +869,8 @@ function removeInstrument(instId) {
         .catch(function (xhr) {
             btn.prop("disabled", true).html('<i class="fa-solid fa-check me-2"></i>Installed');
             let errMsg = "Failed to remove instrument due to network error.";
-            if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+            if (xhr && xhr.responseJSON && xhr.responseJSON.message)
                 errMsg = xhr.responseJSON.message;
-            }
             showToast(errMsg, true);
         });
 }

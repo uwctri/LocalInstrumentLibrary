@@ -1,8 +1,7 @@
 ## TODO
 
-* Accept new submissions and save them as files in porject
-* When EM is enabled we need to create a project to use as storage
-  * This is setup but not working
+* Handle pagination
+* What even is the time for?
 * External Page for viewing instruments w/o install
 * Install needs to install the actual instrument and not a placeholder
 * Admin workflow

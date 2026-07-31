@@ -1,0 +1,27 @@
+{
+  "categories": [
+    {"bg": "#faf5ff", "text": "#6b21a8"},
+    {"bg": "#fff7ed", "text": "#9a3412"},
+    {"bg": "#fff1f2", "text": "#9f1239"},
+    {"bg": "#f0fdfa", "text": "#0f766e"},
+    {"bg": "#f0f9ff", "text": "#075985"},
+    {"bg": "#fdf2f8", "text": "#9d174d"},
+    {"bg": "#fefce8", "text": "#854d0e"},
+    {"bg": "#f1f5f9", "text": "#334155"}
+  ],
+  "field_types": {
+    "text": {"bg": "#f1f5f9", "text": "#475569", "border": "#cbd5e1"},
+    "notes": {"bg": "#f8fafc", "text": "#64748b", "border": "#e2e8f0"},
+    "descriptive": {"bg": "#f8fafc", "text": "#475569", "border": "#cbd5e1"},
+    "file": {"bg": "#f0fdfa", "text": "#0f766e", "border": "#ccfbf1"},
+    "yesno": {"bg": "#ecfdf5", "text": "#047857", "border": "#a7f3d0"},
+    "truefalse": {"bg": "#ecfdf5", "text": "#047857", "border": "#a7f3d0"},
+    "select": {"bg": "#dcfce7", "text": "#166534", "border": "#bbf7d0"},
+    "dropdown": {"bg": "#dcfce7", "text": "#166534", "border": "#bbf7d0"},
+    "radio": {"bg": "#f3e8ff", "text": "#6b21a8", "border": "#e9d5ff"},
+    "checkbox": {"bg": "#fae8ff", "text": "#86198f", "border": "#f5d0fe"},
+    "slider": {"bg": "#e0e7ff", "text": "#4338ca", "border": "#c7d2fe"},
+    "calc": {"bg": "#fef9c3", "text": "#854d0e", "border": "#fef08a"},
+    "default": {"bg": "#f1f5f9", "text": "#475569", "border": "#cbd5e1"}
+  }
+}

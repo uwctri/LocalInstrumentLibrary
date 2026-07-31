@@ -5,38 +5,10 @@
 // Include REDCap Control Center Header
 require_once APP_PATH_DOCROOT . 'ControlCenter/header.php';
 
-// Load mock data
-require_once __DIR__ . '/dummy_data.php';
+$instruments = $module->getInstruments();
 require_once __DIR__ . '/dummy_submissions.php';
 
-// Helper to compare semantic versions
-if (!function_exists('compareAdminVersions')) {
-    function compareAdminVersions($v1, $v2)
-    {
-        $parts1 = explode('.', $v1);
-        $parts2 = explode('.', $v2);
-        for ($i = 0; $i < max(count($parts1), count($parts2)); $i++) {
-            $p1 = isset($parts1[$i]) ? (int)$parts1[$i] : 0;
-            $p2 = isset($parts2[$i]) ? (int)$parts2[$i] : 0;
-            if ($p1 > $p2) return 1;
-            if ($p1 < $p2) return -1;
-        }
-        return 0;
-    }
-}
-
-// Process instruments array to determine latest version dynamically
 foreach ($instruments as &$inst) {
-    $latest = "0.0.0";
-    if (isset($inst['versions']) && is_array($inst['versions'])) {
-        foreach ($inst['versions'] as $vObj) {
-            $v = $vObj['version'];
-            if (compareAdminVersions($v, $latest) > 0) {
-                $latest = $v;
-            }
-        }
-    }
-    $inst['version'] = 'v' . $latest;
     $inst['status'] = 'active'; // Add initial status
 }
 unset($inst);
@@ -60,25 +32,14 @@ if (empty($configured_categories)) {
 } else {
     foreach ($configured_categories as $catName) {
         $name = trim($catName);
-        if (!empty($name)) {
+        if (!empty($name))
             $raw_categories[] = ["name" => $name];
-        }
     }
 }
 
 // Pastel category tag color configurations
-$nice_colors = [
-    ["bg" => "#eff6ff", "text" => "#1e40af"],
-    ["bg" => "#f0fdf4", "text" => "#166534"],
-    ["bg" => "#faf5ff", "text" => "#6b21a8"],
-    ["bg" => "#fff7ed", "text" => "#9a3412"],
-    ["bg" => "#fff1f2", "text" => "#9f1239"],
-    ["bg" => "#f0fdfa", "text" => "#0f766e"],
-    ["bg" => "#f0f9ff", "text" => "#075985"],
-    ["bg" => "#fdf2f8", "text" => "#9d174d"],
-    ["bg" => "#fefce8", "text" => "#854d0e"],
-    ["bg" => "#f1f5f9", "text" => "#334155"]
-];
+$colors_config = $module->getColorsConfig();
+$nice_colors = $colors_config['categories'] ?? [];
 
 $categories_list = [];
 foreach ($raw_categories as $index => $cat) {

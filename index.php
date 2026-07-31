@@ -3,39 +3,9 @@
 /** @var \UWMadison\LocalInstrumentLibrary\LocalInstrumentLibrary $module */
 
 require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
-require_once __DIR__ . '/dummy_data.php';
+$instruments = $module->getInstruments();
 
 $module->initializeJavascriptModuleObject();
-
-// Helper to compare semantic versions in PHP
-function comparePHPVersions($v1, $v2)
-{
-    $parts1 = explode('.', $v1);
-    $parts2 = explode('.', $v2);
-    for ($i = 0; $i < max(count($parts1), count($parts2)); $i++) {
-        $p1 = isset($parts1[$i]) ? (int)$parts1[$i] : 0;
-        $p2 = isset($parts2[$i]) ? (int)$parts2[$i] : 0;
-        if ($p1 > $p2) return 1;
-        if ($p1 < $p2) return -1;
-    }
-    return 0;
-}
-
-// Extract the latest version dynamically from the versions array for backward compatibility
-foreach ($instruments as &$inst) {
-    $id = $inst['id'];
-    $latest = "0.0.0";
-    if (isset($inst['versions']) && is_array($inst['versions'])) {
-        foreach ($inst['versions'] as $vObj) {
-            $v = $vObj['version'];
-            if (comparePHPVersions($v, $latest) > 0) {
-                $latest = $v;
-            }
-        }
-    }
-    $inst['version'] = 'v' . $latest;
-}
-unset($inst);
 
 // Retrieve the installed instruments list for this project
 $installed_instruments = $module->getProjectSetting('installed_instruments') ?? [];
@@ -67,25 +37,14 @@ if (empty($configured_categories)) {
     // Collect non-empty category names from settings (flat array)
     foreach ($configured_categories as $catName) {
         $name = trim($catName);
-        if (!empty($name)) {
+        if (!empty($name))
             $raw_categories[] = ["name" => $name];
-        }
     }
 }
 
-// 10 pastel background & dark text color theme combinations
-$nice_colors = [
-    ["bg" => "#eff6ff", "text" => "#1e40af"], // Blue
-    ["bg" => "#f0fdf4", "text" => "#166534"], // Green
-    ["bg" => "#faf5ff", "text" => "#6b21a8"], // Purple
-    ["bg" => "#fff7ed", "text" => "#9a3412"], // Orange
-    ["bg" => "#fff1f2", "text" => "#9f1239"], // Rose
-    ["bg" => "#f0fdfa", "text" => "#0f766e"], // Teal
-    ["bg" => "#f0f9ff", "text" => "#075985"], // Sky
-    ["bg" => "#fdf2f8", "text" => "#9d174d"], // Pink
-    ["bg" => "#fefce8", "text" => "#854d0e"], // Yellow
-    ["bg" => "#f1f5f9", "text" => "#334155"]  // Slate
-];
+$colors_config = $module->getColorsConfig();
+$nice_colors = $colors_config['categories'] ?? [];
+$field_type_colors = $colors_config['field_types'] ?? [];
 
 // Map index-based color overrides and generate CSS class keys dynamically
 $categories_list = [];
@@ -113,6 +72,34 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         $cat['bg']
     );
 }, $categories_list));
+
+// Collect all unique field types present in the loaded instruments
+$unique_types = [];
+foreach ($instruments as $inst) {
+    if (isset($inst['fields']) && is_array($inst['fields'])) {
+        foreach ($inst['fields'] as $field) {
+            $type = strtolower(trim($field['type'] ?? ''));
+            if (!empty($type))
+                $unique_types[$type] = $type;
+        }
+    }
+}
+
+// Generate field type styles dynamically, falling back to default configuration if not defined
+$dynamic_field_type_styles = "";
+$default_colors = $field_type_colors['default'] ?? ["bg" => "#f1f5f9", "text" => "#475569", "border" => "#cbd5e1"];
+
+foreach ($unique_types as $type) {
+    $colors = $field_type_colors[$type] ?? $default_colors;
+    $dynamic_field_type_styles .= sprintf(
+        "#local-instrument-lib-container .type-%s,\n#preview-modal .type-%s {\n    background-color: %s !important;\n    color: %s !important;\n    border-color: %s !important;\n    font-weight: 600 !important;\n}\n\n",
+        $type,
+        $type,
+        $colors['bg'],
+        $colors['text'],
+        $colors['border']
+    );
+}
 ?>
 
 <!-- Include Google Fonts and FontAwesome for premium design -->
@@ -121,8 +108,9 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= $module->getUrl('style.css'); ?>">
 
-<style id="dynamic-category-styles">
+<style id="dynamic-styles">
     <?= $dynamic_category_styles ?>
+    <?= $dynamic_field_type_styles ?>
 </style>
 
 <div id="local-instrument-lib-container" class="container-fluid py-4 px-3 px-sm-4 bg-light border rounded-3 mt-3 shadow-sm">
@@ -266,6 +254,18 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                 </div>
             </div>
         <?php endforeach; ?>
+    </div>
+
+    <!-- Pagination Container -->
+    <div class="d-flex justify-content-between align-items-center mt-4 bg-white p-3 rounded-3 border shadow-sm flex-wrap gap-2" id="lib-pagination-container">
+        <div class="text-muted" style="font-size: 0.88rem;" id="pagination-info">
+            <!-- Dynamic pagination info -->
+        </div>
+        <nav aria-label="Page navigation">
+            <ul class="pagination mb-0" id="pagination-controls" style="cursor: pointer;">
+                <!-- Dynamically populated page list -->
+            </ul>
+        </nav>
     </div>
 
     <!-- Empty State Container (Hidden initially) -->
@@ -528,6 +528,10 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     let installedCount = <?= count(array_filter($instruments, function ($i) {
                                 return $i['installed'];
                             })); ?>;
+
+    // Dump loaded JSON configurations to browser console
+    console.log("Colors Config loaded from colors_config.json:", <?= json_encode($colors_config) ?>);
+    console.log("Instruments Metadata loaded:", <?= json_encode($instruments) ?>);
 </script>
 <script type="text/javascript" src="<?= $module->getUrl('index.js'); ?>"></script>
 

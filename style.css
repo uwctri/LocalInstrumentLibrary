@@ -51,49 +51,7 @@
     border-color: #93c5fd !important;
 }
 
-/* Field type badges (using !important to override Bootstrap badge defaults) */
-.type-text {
-    background-color: #f1f5f9 !important;
-    color: #475569 !important;
-    border-color: #cbd5e1 !important;
-    font-weight: 600 !important;
-}
-
-.type-date,
-.type-datetime {
-    background-color: #e0f2fe !important;
-    color: #0369a1 !important;
-    border-color: #bae6fd !important;
-    font-weight: 600 !important;
-}
-
-.type-radio {
-    background-color: #f3e8ff !important;
-    color: #6b21a8 !important;
-    border-color: #e9d5ff !important;
-    font-weight: 600 !important;
-}
-
-.type-checkbox {
-    background-color: #fae8ff !important;
-    color: #86198f !important;
-    border-color: #f5d0fe !important;
-    font-weight: 600 !important;
-}
-
-.type-dropdown {
-    background-color: #dcfce7 !important;
-    color: #166534 !important;
-    border-color: #bbf7d0 !important;
-    font-weight: 600 !important;
-}
-
-.type-calc {
-    background-color: #fef9c3 !important;
-    color: #854d0e !important;
-    border-color: #fef08a !important;
-    font-weight: 600 !important;
-}
+/* Dynamic field type badge styles are loaded from colors_config.json and injected dynamically */
 
 /* Success highlight overrides for installed buttons */
 .btn-install.is-installed {
@@ -331,4 +289,46 @@
     #instruments-grid > * {
         width: 25% !important;
     }
+}
+
+/* Layout stabilization to prevent height shift during paging */
+#instruments-grid {
+    min-height: 640px;
+    align-content: flex-start;
+}
+
+/* Modern, thick pagination buttons */
+#pagination-controls .page-link {
+    padding: 8px 16px !important;
+    font-size: 0.92rem !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    margin: 0 4px !important;
+    color: #4b5563 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    transition: all 0.15s ease !important;
+}
+
+#pagination-controls .page-item.active .page-link {
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2), 0 2px 4px -1px rgba(59, 130, 246, 0.1) !important;
+}
+
+#pagination-controls .page-item.disabled .page-link {
+    color: #9ca3af !important;
+    background-color: #f3f4f6 !important;
+    border-color: #e5e7eb !important;
+    box-shadow: none !important;
+    cursor: not-allowed;
+}
+
+#pagination-controls .page-link:hover:not(.active):not(.disabled) {
+    background-color: #f9fafb !important;
+    border-color: #9ca3af !important;
+    color: #111827 !important;
+    transform: translateY(-1px);
 }
