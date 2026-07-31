@@ -38,11 +38,7 @@ foreach ($instruments as &$inst) {
 unset($inst);
 
 // Retrieve the installed instruments list for this project
-$installed_instruments = $module->getProjectSetting('installed_instruments');
-if ($installed_instruments === null) {
-    // Default installed instrument for demo purposes
-    $installed_instruments = ['standard_demographics'];
-}
+$installed_instruments = $module->getProjectSetting('installed_instruments') ?? [];
 
 // Map installed status dynamically
 foreach ($instruments as &$inst) {
@@ -77,18 +73,18 @@ if (empty($configured_categories)) {
     }
 }
 
-// 10 premium soft pastel background & dark text color theme combinations
+// 10 pastel background & dark text color theme combinations
 $nice_colors = [
-    ["bg" => "#eff6ff", "text" => "#1e40af"], // Soft Blue
-    ["bg" => "#f0fdf4", "text" => "#166534"], // Soft Green
-    ["bg" => "#faf5ff", "text" => "#6b21a8"], // Soft Purple
-    ["bg" => "#fff7ed", "text" => "#9a3412"], // Soft Orange
-    ["bg" => "#fff1f2", "text" => "#9f1239"], // Soft Rose
-    ["bg" => "#f0fdfa", "text" => "#0f766e"], // Soft Teal
-    ["bg" => "#f0f9ff", "text" => "#075985"], // Soft Sky
-    ["bg" => "#fdf2f8", "text" => "#9d174d"], // Soft Pink
-    ["bg" => "#fefce8", "text" => "#854d0e"], // Soft Yellow
-    ["bg" => "#f1f5f9", "text" => "#334155"]  // Soft Slate
+    ["bg" => "#eff6ff", "text" => "#1e40af"], // Blue
+    ["bg" => "#f0fdf4", "text" => "#166534"], // Green
+    ["bg" => "#faf5ff", "text" => "#6b21a8"], // Purple
+    ["bg" => "#fff7ed", "text" => "#9a3412"], // Orange
+    ["bg" => "#fff1f2", "text" => "#9f1239"], // Rose
+    ["bg" => "#f0fdfa", "text" => "#0f766e"], // Teal
+    ["bg" => "#f0f9ff", "text" => "#075985"], // Sky
+    ["bg" => "#fdf2f8", "text" => "#9d174d"], // Pink
+    ["bg" => "#fefce8", "text" => "#854d0e"], // Yellow
+    ["bg" => "#f1f5f9", "text" => "#334155"]  // Slate
 ];
 
 // Map index-based color overrides and generate CSS class keys dynamically
@@ -137,11 +133,11 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         <div class="d-flex gap-3 flex-wrap">
             <div class="lib-stat-badge bg-white bg-opacity-10 border border-white border-opacity-25 rounded-pill px-3 py-2 text-white" style="font-size: 0.92rem; font-weight: 500;">
                 <i class="fa-solid fa-list-ul me-2"></i>
-                <span id="stat-total" class="fw-semibold">10 Available Instruments</span>
+                <span id="stat-total" class="fw-semibold"><?= count($instruments) ?> Available Instruments</span>
             </div>
             <div class="lib-stat-badge bg-white bg-opacity-10 border border-white border-opacity-25 rounded-pill px-3 py-2 text-white" style="font-size: 0.92rem; font-weight: 500;">
                 <i class="fa-solid fa-circle-check me-2"></i>
-                <span id="stat-installed" class="fw-semibold">1 Installed in Project</span>
+                <span id="stat-installed" class="fw-semibold"><?= count($installed_instruments) ?> Installed in Project</span>
             </div>
         </div>
     </div>

@@ -8,6 +8,14 @@ use MetaData;
 
 class LocalInstrumentLibrary extends AbstractExternalModule
 {
+    public function redcap_module_system_enable($version)
+    {
+        if (!empty($this->getSystemSetting("storage_project")))
+            return;
+        $project_id = $this->createProject("Local Instrument Library", "Stores local instruments for easy sharing");
+        $this->setSystemSetting("storage_project", $project_id);
+    }
+
     public function redcap_every_page_top($project_id)
     {
         if (!$this->isPage('Design/online_designer.php') || empty($project_id))
