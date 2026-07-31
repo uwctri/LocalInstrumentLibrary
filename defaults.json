@@ -1,5 +1,17 @@
 {
-  "categories": [
+  "default_categories": [
+    "Cardiology",
+    "Clinical",
+    "Demographics",
+    "Mental Health",
+    "Neurology",
+    "Oncology",
+    "Patient Feedback",
+    "Pediatrics",
+    "Screening"
+  ],
+  "default_rows_per_page": 2,
+  "category_colors": [
     {"bg": "#faf5ff", "text": "#6b21a8"},
     {"bg": "#fff7ed", "text": "#9a3412"},
     {"bg": "#fff1f2", "text": "#9f1239"},
@@ -9,7 +21,7 @@
     {"bg": "#fefce8", "text": "#854d0e"},
     {"bg": "#f1f5f9", "text": "#334155"}
   ],
-  "field_types": {
+  "field_type_colors": {
     "text": {"bg": "#f1f5f9", "text": "#475569", "border": "#cbd5e1"},
     "notes": {"bg": "#f8fafc", "text": "#64748b", "border": "#e2e8f0"},
     "descriptive": {"bg": "#f8fafc", "text": "#475569", "border": "#cbd5e1"},

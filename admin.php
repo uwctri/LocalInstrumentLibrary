@@ -17,18 +17,13 @@ unset($inst);
 $configured_categories = $module->getSystemSetting('categories');
 $raw_categories = [];
 
+$defaults = $module->getDefaults();
+$default_cats = $defaults['default_categories'] ?? [];
+
 if (empty($configured_categories)) {
-    $raw_categories = [
-        ["name" => "Cardiology"],
-        ["name" => "Clinical"],
-        ["name" => "Demographics"],
-        ["name" => "Mental Health"],
-        ["name" => "Neurology"],
-        ["name" => "Oncology"],
-        ["name" => "Patient Feedback"],
-        ["name" => "Pediatrics"],
-        ["name" => "Screening"]
-    ];
+    foreach ($default_cats as $catName) {
+        $raw_categories[] = ["name" => $catName];
+    }
 } else {
     foreach ($configured_categories as $catName) {
         $name = trim($catName);
@@ -38,8 +33,7 @@ if (empty($configured_categories)) {
 }
 
 // Pastel category tag color configurations
-$colors_config = $module->getColorsConfig();
-$nice_colors = $colors_config['categories'] ?? [];
+$nice_colors = $defaults['category_colors'] ?? [];
 
 $categories_list = [];
 foreach ($raw_categories as $index => $cat) {
@@ -69,10 +63,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
 }, $categories_list));
 ?>
 
-<!-- Include Google Fonts and FontAwesome for premium design -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Load Local Styles and Fonts -->
 <link rel="stylesheet" href="<?= $module->getUrl('admin.css'); ?>">
 
 <style id="dynamic-admin-styles">

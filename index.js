@@ -7,12 +7,33 @@ let selectedCategories = ["All"];
 
 // Pagination State
 let currentPage = 1;
-const itemsPerPage = 6;
+let rowsPerPage = typeof defaultRowsPerPage !== "undefined" ? defaultRowsPerPage : 2;
 
 $(document).ready(function () {
     // Instantiate the Bootstrap 5 Modals
     previewModal = new bootstrap.Modal(document.getElementById('preview-modal'));
     submitModal = new bootstrap.Modal(document.getElementById('submit-modal'));
+
+    // Load pagination rows-per-page cookie
+    const savedRows = getCookie("lib_rows_per_page");
+    if (savedRows) {
+        const val = parseInt(savedRows);
+        if (!isNaN(val) && val > 0) {
+            rowsPerPage = val;
+            $("#rows-per-page-input").val(val);
+        }
+    }
+
+    // rows-per-page input handler (handles both typing and datalist selection)
+    $("#rows-per-page-input").on("input change", function () {
+        const valStr = $(this).val();
+        const newRows = parseInt(valStr);
+        if (!isNaN(newRows) && newRows > 0) {
+            setCookie("lib_rows_per_page", newRows, 365);
+        }
+        currentPage = 1;
+        filterGrid();
+    });
 
     // 1. Search Functionality
     $("#lib-search").on("input", function () {
@@ -562,6 +583,16 @@ $(document).ready(function () {
         }
     });
 
+    // Listen to window resize events to recalculate pages when grid columns change
+    let lastCardsPerRow = getCardsPerRow();
+    $(window).on("resize", function () {
+        const current = getCardsPerRow();
+        if (current !== lastCardsPerRow) {
+            lastCardsPerRow = current;
+            filterGrid();
+        }
+    });
+
     // Run filterGrid on initial page load to apply pagination
     filterGrid();
 });
@@ -576,6 +607,14 @@ function updateDropdownTriggerLabel() {
     } else {
         $("#selected-category-text").text(selectedCategories.length + " Categories Selected");
     }
+}
+
+function getCardsPerRow() {
+    const width = window.innerWidth;
+    if (width >= 2000) return 4;
+    if (width >= 1600) return 3;
+    if (width >= 1100) return 2;
+    return 1;
 }
 
 // Primary filter function combining search input + category dropdown selection
@@ -610,13 +649,23 @@ function filterGrid() {
     $("#lib-empty").hide();
     $("#instruments-grid").show();
 
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    // Dynamically retrieve and validate rows limit
+    let rows = parseInt($("#rows-per-page-input").val());
+    if (isNaN(rows) || rows <= 0) {
+        rows = typeof defaultRowsPerPage !== "undefined" ? defaultRowsPerPage : 2;
+    }
+    rowsPerPage = rows;
+
+    const cardsPerRow = getCardsPerRow();
+    const limit = rows * cardsPerRow;
+
+    const totalPages = Math.ceil(totalItems / limit);
     if (currentPage > totalPages) {
         currentPage = Math.max(1, totalPages);
     }
 
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+    const startIndex = (currentPage - 1) * limit;
+    const endIndex = Math.min(startIndex + limit, totalItems);
 
     matchingCards.forEach(function ($card, index) {
         if (index >= startIndex && index < endIndex) {
@@ -630,16 +679,17 @@ function filterGrid() {
 }
 
 function renderPagination(totalItems, totalPages, startIndex, endIndex) {
-    if (totalPages <= 1) {
-        $("#lib-pagination-container").hide();
-        return;
-    }
     $("#lib-pagination-container").show();
-
     $("#pagination-info").text(`Showing ${startIndex + 1}-${endIndex} of ${totalItems} instruments`);
 
     const controls = $("#pagination-controls");
     controls.empty();
+
+    if (totalPages <= 1) {
+        controls.hide();
+        return;
+    }
+    controls.show();
 
     const prevClass = currentPage === 1 ? "disabled" : "";
     controls.append(`<li class="page-item ${prevClass}" data-page="${currentPage - 1}"><span class="page-link">&laquo; Prev</span></li>`);
@@ -911,4 +961,26 @@ function compareSemanticVersions(v1, v2) {
         if (p1 < p2) return -1;
     }
     return 0;
+}
+
+// Cookie Helpers
+function setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+        let date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+}
+
+function getCookie(name) {
+    let nameEQ = name + "=";
+    let ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
 }

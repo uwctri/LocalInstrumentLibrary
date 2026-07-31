@@ -1,6 +1,5 @@
 ## TODO
 
-* Handle pagination
 * What even is the time for?
 * External Page for viewing instruments w/o install
 * Install needs to install the actual instrument and not a placeholder

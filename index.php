@@ -20,19 +20,14 @@ unset($inst);
 $configured_categories = $module->getSystemSetting('categories');
 $raw_categories = [];
 
+$defaults = $module->getDefaults();
+$default_cats = $defaults['default_categories'] ?? [];
+
 if (empty($configured_categories)) {
-    // Fallback default categories list
-    $raw_categories = [
-        ["name" => "Cardiology"],
-        ["name" => "Clinical"],
-        ["name" => "Demographics"],
-        ["name" => "Mental Health"],
-        ["name" => "Neurology"],
-        ["name" => "Oncology"],
-        ["name" => "Patient Feedback"],
-        ["name" => "Pediatrics"],
-        ["name" => "Screening"]
-    ];
+    // Load default categories list from defaults.json
+    foreach ($default_cats as $catName) {
+        $raw_categories[] = ["name" => $catName];
+    }
 } else {
     // Collect non-empty category names from settings (flat array)
     foreach ($configured_categories as $catName) {
@@ -42,9 +37,8 @@ if (empty($configured_categories)) {
     }
 }
 
-$colors_config = $module->getColorsConfig();
-$nice_colors = $colors_config['categories'] ?? [];
-$field_type_colors = $colors_config['field_types'] ?? [];
+$nice_colors = $defaults['category_colors'] ?? [];
+$field_type_colors = $defaults['field_type_colors'] ?? [];
 
 // Map index-based color overrides and generate CSS class keys dynamically
 $categories_list = [];
@@ -102,10 +96,7 @@ foreach ($unique_types as $type) {
 }
 ?>
 
-<!-- Include Google Fonts and FontAwesome for premium design -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Load Local Styles and Fonts -->
 <link rel="stylesheet" href="<?= $module->getUrl('style.css'); ?>">
 
 <style id="dynamic-styles">
@@ -258,8 +249,20 @@ foreach ($unique_types as $type) {
 
     <!-- Pagination Container -->
     <div class="d-flex justify-content-between align-items-center mt-4 bg-white p-3 rounded-3 border shadow-sm flex-wrap gap-2" id="lib-pagination-container">
-        <div class="text-muted" style="font-size: 0.88rem;" id="pagination-info">
-            <!-- Dynamic pagination info -->
+        <div class="d-flex align-items-center gap-3">
+            <div class="text-muted" style="font-size: 0.88rem;" id="pagination-info">
+                <!-- Dynamic pagination info -->
+            </div>
+            <div class="d-flex align-items-center gap-2 border-start ps-3" id="rows-per-page-wrapper" style="font-size: 0.88rem;">
+                <span class="text-muted">Rows:</span>
+                <input type="number" id="rows-per-page-input" list="rows-per-page-list" class="form-control form-control-sm border-secondary border-opacity-25 text-center" style="width: 70px;" min="1" value="<?= (int)($defaults['default_rows_per_page'] ?? 2) ?>">
+                <datalist id="rows-per-page-list">
+                    <option value="1"></option>
+                    <option value="2"></option>
+                    <option value="3"></option>
+                    <option value="4"></option>
+                </datalist>
+            </div>
         </div>
         <nav aria-label="Page navigation">
             <ul class="pagination mb-0" id="pagination-controls" style="cursor: pointer;">
@@ -522,6 +525,7 @@ foreach ($unique_types as $type) {
 
 <script type="text/javascript">
     const module = <?= $module->getJavascriptModuleObjectName() ?>;
+    const defaultRowsPerPage = <?= (int)($defaults['default_rows_per_page'] ?? 2) ?>;
 
     // Store instrument fields data in a global JS object for easy access in preview modal
     const instrumentFields = <?= json_encode(array_column($instruments, null, 'id')); ?>;
@@ -530,7 +534,7 @@ foreach ($unique_types as $type) {
                             })); ?>;
 
     // Dump loaded JSON configurations to browser console
-    console.log("Colors Config loaded from colors_config.json:", <?= json_encode($colors_config) ?>);
+    console.log("Defaults loaded from defaults.json:", <?= json_encode($defaults) ?>);
     console.log("Instruments Metadata loaded:", <?= json_encode($instruments) ?>);
 </script>
 <script type="text/javascript" src="<?= $module->getUrl('index.js'); ?>"></script>

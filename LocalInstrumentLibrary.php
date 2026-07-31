@@ -134,8 +134,14 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             return ['status' => 'error', 'message' => 'Storage project not configured. Please enable the module first.'];
         }
 
+        $originalName = $payload['fileName'] ?? 'instrument.zip';
+        $ext = pathinfo($originalName, PATHINFO_EXTENSION);
+        $base = pathinfo($originalName, PATHINFO_FILENAME);
+        $version = $payload['version'] ?? '1.0.0';
+        $fileName = $base . "_" . $version . "." . $ext;
+
         $file = [
-            'name' => $payload['fileName'] ?? 'instrument.zip',
+            'name' => $fileName,
             'tmp_name' => $tempFile,
             'size' => filesize($tempFile)
         ];
@@ -232,8 +238,11 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             return ['status' => 'error', 'message' => 'Storage project not configured. Please enable the module first.'];
         }
 
+        $version = $payload['version'] ?? '1.0.0';
+        $fileName = $instName . "_instrument_" . $version . ".zip";
+
         $file = [
-            'name' => $instName . '_instrument.zip',
+            'name' => $fileName,
             'tmp_name' => $tempFile,
             'size' => filesize($tempFile)
         ];
@@ -512,9 +521,9 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         return array_values($combined);
     }
 
-    public function getColorsConfig()
+    public function getDefaults()
     {
-        $path = __DIR__ . '/colors_config.json';
+        $path = __DIR__ . '/defaults.json';
         if (!file_exists($path))
             return [];
         return json_decode(file_get_contents($path), true);
