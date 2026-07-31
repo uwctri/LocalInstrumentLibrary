@@ -293,7 +293,7 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     let activeInstruments = <?= json_encode(array_values($instruments)); ?>;
     let pendingSubmissions = <?= json_encode(array_values($dummy_submissions)); ?>;
 </script>
-<script type="text/javascript" src="<?= $module->getUrl('admin.js'); ?>"></script>
+<script type="module" src="<?= $module->getUrl('admin.js'); ?>"></script>
 
 <?php
 // Include REDCap Control Center Footer

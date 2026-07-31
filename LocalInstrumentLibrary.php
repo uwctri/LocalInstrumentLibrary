@@ -44,9 +44,9 @@ class LocalInstrumentLibrary extends AbstractExternalModule
 
                 button.closest('div').after(newContainer);
             });
-            $('body').on('click', '#local-library-btn', function(e) {
+            $('body').on('click', '#local-library-btn', (e) => {
                 e.preventDefault();
-                window.location.href = $(this).attr('href');
+                window.location.href = $(e.currentTarget).attr('href');
             });
         </script>
 <?php
@@ -119,13 +119,12 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             $var = $row[$nameIdx] ?? '';
             $typeField = $row[$typeIdx] ?? '';
             $label = $row[$labelIdx] ?? '';
-            if (!empty($var)) {
+            if (!empty($var))
                 $fields[] = [
                     'label' => $label,
                     'variable' => $var,
                     'type' => $typeField
                 ];
-            }
         }
 
         $storage_pid = $this->getSystemSetting("storage_project");
@@ -273,13 +272,12 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         if ($subType === 'new' && empty($title))
             return ['status' => 'error', 'message' => 'Instrument title is required.'];
 
-        if ($type === 'zip') {
+        if ($type === 'zip')
             $result = $this->handleZipSubmission($payload);
-        } elseif ($type === 'project') {
+        elseif ($type === 'project')
             $result = $this->handleProjectSubmission($payload, $project_id);
-        } else {
+        else
             return ['status' => 'error', 'message' => 'Invalid submission type.'];
-        }
 
         if ($result['status'] === 'error')
             return $result;
@@ -412,12 +410,11 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         if (!empty($overlapping_fields))
             $errors[] = "The following field names already exist in this project: " . implode(', ', $overlapping_fields) . ".";
 
-        if (!empty($errors)) {
+        if (!empty($errors))
             return [
                 'status' => 'error',
                 'message' => "Cannot install. " . implode(' ', $errors)
             ];
-        }
 
         $current_dd = $this->getMetadata($project_id);
         $placeholder_field = $inst_id . "_placeholder";
@@ -444,12 +441,11 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         $current_dd[] = $new_field;
 
         list($fieldCount, $saveErrors) = MetaData::saveMetadataFlat($current_dd);
-        if (!empty($saveErrors)) {
+        if (!empty($saveErrors))
             return [
                 'status' => 'error',
                 'message' => 'Failed to save metadata: ' . implode(' ', (array)$saveErrors)
             ];
-        }
 
         $installed_instruments = $this->getProjectSetting('installed_instruments', $project_id) ?? [];
         if (!in_array($inst_id, $installed_instruments)) {
@@ -532,32 +528,32 @@ class LocalInstrumentLibrary extends AbstractExternalModule
     public function loadUploadedInstruments()
     {
         $chunk1 = $this->getSystemSetting("instruments_metadata_1");
-        if ($chunk1 !== null) {
-            $chunks = [];
-            $chunks[] = $this->getSystemSetting("instruments_metadata");
-
-            $i = 1;
-            while (true) {
-                $chunk = $this->getSystemSetting("instruments_metadata_" . $i);
-                if ($chunk === null)
-                    break;
-                $chunks[] = $chunk;
-                $i++;
-            }
-
-            $json_str = implode('', $chunks);
-            $decoded = json_decode($json_str, true);
-            return is_array($decoded) ? $decoded : [];
-        } else {
+        if ($chunk1 === null) {
             $uploaded = $this->getSystemSetting("instruments_metadata");
-            if (is_array($uploaded)) {
+            if (is_array($uploaded))
                 return $uploaded;
-            } elseif (is_string($uploaded)) {
+            if (is_string($uploaded)) {
                 $decoded = json_decode($uploaded, true);
                 return is_array($decoded) ? $decoded : [];
             }
             return [];
         }
+
+        $chunks = [];
+        $chunks[] = $this->getSystemSetting("instruments_metadata");
+
+        $i = 1;
+        while (true) {
+            $chunk = $this->getSystemSetting("instruments_metadata_" . $i);
+            if ($chunk === null)
+                break;
+            $chunks[] = $chunk;
+            $i++;
+        }
+
+        $json_str = implode('', $chunks);
+        $decoded = json_decode($json_str, true);
+        return is_array($decoded) ? $decoded : [];
     }
 
     public function saveUploadedInstruments($uploaded_instruments)
@@ -565,26 +561,12 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         $json_str = json_encode($uploaded_instruments);
         $chunk_size = 60000;
 
-        if (strlen($json_str) <= $chunk_size) {
-            $this->setSystemSetting("instruments_metadata", $uploaded_instruments);
-
-            $i = 1;
-            while (true) {
-                $setting_name = "instruments_metadata_" . $i;
-                $existing = $this->getSystemSetting($setting_name);
-                if ($existing === null)
-                    break;
-                $this->removeSystemSetting($setting_name);
-                $i++;
-            }
-        } else {
+        if (strlen($json_str) > $chunk_size) {
             $chunks = str_split($json_str, $chunk_size);
-
             $this->setSystemSetting("instruments_metadata", $chunks[0]);
 
-            for ($i = 1; $i < count($chunks); $i++) {
+            for ($i = 1; $i < count($chunks); $i++)
                 $this->setSystemSetting("instruments_metadata_" . $i, $chunks[$i]);
-            }
 
             $i = count($chunks);
             while (true) {
@@ -595,6 +577,19 @@ class LocalInstrumentLibrary extends AbstractExternalModule
                 $this->removeSystemSetting($setting_name);
                 $i++;
             }
+            return;
+        }
+
+        $this->setSystemSetting("instruments_metadata", $uploaded_instruments);
+
+        $i = 1;
+        while (true) {
+            $setting_name = "instruments_metadata_" . $i;
+            $existing = $this->getSystemSetting($setting_name);
+            if ($existing === null)
+                break;
+            $this->removeSystemSetting($setting_name);
+            $i++;
         }
     }
 }

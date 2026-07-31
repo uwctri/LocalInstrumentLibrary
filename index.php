@@ -70,13 +70,12 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
 // Collect all unique field types present in the loaded instruments
 $unique_types = [];
 foreach ($instruments as $inst) {
-    if (isset($inst['fields']) && is_array($inst['fields'])) {
+    if (isset($inst['fields']) && is_array($inst['fields']))
         foreach ($inst['fields'] as $field) {
             $type = strtolower(trim($field['type'] ?? ''));
             if (!empty($type))
                 $unique_types[$type] = $type;
         }
-    }
 }
 
 // Generate field type styles dynamically, falling back to default configuration if not defined
@@ -537,7 +536,7 @@ foreach ($unique_types as $type) {
     console.log("Defaults loaded from defaults.json:", <?= json_encode($defaults) ?>);
     console.log("Instruments Metadata loaded:", <?= json_encode($instruments) ?>);
 </script>
-<script type="text/javascript" src="<?= $module->getUrl('index.js'); ?>"></script>
+<script type="module" src="<?= $module->getUrl('index.js'); ?>"></script>
 
 <?php
 require_once APP_PATH_DOCROOT . 'ProjectGeneral/footer.php';

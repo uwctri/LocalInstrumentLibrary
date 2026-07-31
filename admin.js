@@ -1,110 +1,96 @@
-let previewModalObj, editModalObj;
+// 0. Scoped Modal References
+let previewModalObj = new bootstrap.Modal(document.getElementById('preview-modal'));
+let editModalObj = new bootstrap.Modal(document.getElementById('edit-modal'));
 
-$(document).ready(function() {
-    previewModalObj = new bootstrap.Modal(document.getElementById('preview-modal'));
-    editModalObj = new bootstrap.Modal(document.getElementById('edit-modal'));
+// Bind Search to update active view dynamically
+$("#admin-search").on("input", () => triggerCurrentFilter());
 
-    // Bind Search to update active view dynamically
-    $("#admin-search").on("input", function() {
-        triggerCurrentFilter();
-    });
+// Listen for tab switches to re-apply the search filter
+$('button[data-bs-toggle="tab"]').on('shown.bs.tab', () => triggerCurrentFilter());
 
-    // Listen for tab switches to re-apply the search filter
-    $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
-        triggerCurrentFilter();
-    });
+// Checkbox styling toggle on click
+$(document).on('change', '.edit-cat-checkbox', (e) => {
+    const $this = $(e.target).closest(".edit-cat-checkbox");
+    const label = $(`label[for="${$this.attr('id')}"]`);
+    if ($this.is(':checked')) {
+        label.find('.unchecked-icon').addClass('d-none');
+        label.find('.checked-icon').removeClass('d-none');
+    } else {
+        label.find('.unchecked-icon').removeClass('d-none');
+        label.find('.checked-icon').addClass('d-none');
+    }
+});
 
-    // Initialize lists
-    renderActiveLibrary();
+// Edit form submission
+$("#edit-instrument-form").on("submit", (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+
+    // Validate checkboxes
+    const selectedCats = [];
+    $(".edit-cat-checkbox:checked").each((idx, el) => selectedCats.push($(el).val()));
+
+    if (selectedCats.length === 0) {
+        $("#edit-categories-invalid").removeClass("d-none");
+        return;
+    }
+    $("#edit-categories-invalid").addClass("d-none");
+
+    if (!form.checkValidity()) {
+        e.stopPropagation();
+        $(form).addClass("was-validated");
+        return;
+    }
+
+    const id = $("#edit-id").val();
+    const type = $("#edit-type").val();
+    const title = $("#edit-title").val();
+    const desc = $("#edit-desc").val();
+    const authorName = $("#edit-author-name").val();
+    const authorEmail = $("#edit-author-email").val();
+    const estTime = $("#edit-time").val();
+
+    if (type === 'active') {
+        const instIndex = activeInstruments.findIndex(i => i.id === id);
+        if (instIndex === -1) return;
+        activeInstruments[instIndex].title = title;
+        activeInstruments[instIndex].description = desc;
+        activeInstruments[instIndex].categories = selectedCats;
+        activeInstruments[instIndex].author_name = authorName;
+        activeInstruments[instIndex].author_email = authorEmail;
+        activeInstruments[instIndex].time = estTime;
+
+        renderActiveLibrary();
+        editModalObj.hide();
+        showToast(`<i class="fas fa-save text-success me-1"></i> "${title}" metadata updated successfully!`);
+        return;
+    }
+
+    const subIndex = pendingSubmissions.findIndex(s => s.id === id);
+    if (subIndex === -1) return;
+    pendingSubmissions[subIndex].title = title;
+    pendingSubmissions[subIndex].description = desc;
+    pendingSubmissions[subIndex].categories = selectedCats;
+    pendingSubmissions[subIndex].author_name = authorName;
+    pendingSubmissions[subIndex].author_email = authorEmail;
+    pendingSubmissions[subIndex].time = estTime;
+
     renderPendingSubmissions();
-
-    // Checkbox styling toggle on click
-    $(document).on('change', '.edit-cat-checkbox', function() {
-        const label = $(`label[for="${$(this).attr('id')}"]`);
-        if ($(this).is(':checked')) {
-            label.find('.unchecked-icon').addClass('d-none');
-            label.find('.checked-icon').removeClass('d-none');
-        } else {
-            label.find('.unchecked-icon').removeClass('d-none');
-            label.find('.checked-icon').addClass('d-none');
-        }
-    });
-
-    // Edit form submission
-    $("#edit-instrument-form").on("submit", function(e) {
-        e.preventDefault();
-
-        // Validate checkboxes
-        const selectedCats = [];
-        $(".edit-cat-checkbox:checked").each(function() {
-            selectedCats.push($(this).val());
-        });
-
-        if (selectedCats.length === 0) {
-            $("#edit-categories-invalid").removeClass("d-none");
-            return;
-        } else {
-            $("#edit-categories-invalid").addClass("d-none");
-        }
-
-        if (!this.checkValidity()) {
-            e.stopPropagation();
-            $(this).addClass("was-validated");
-            return;
-        }
-
-        const id = $("#edit-id").val();
-        const type = $("#edit-type").val();
-        const title = $("#edit-title").val();
-        const desc = $("#edit-desc").val();
-        const authorName = $("#edit-author-name").val();
-        const authorEmail = $("#edit-author-email").val();
-        const estTime = $("#edit-time").val();
-
-        if (type === 'active') {
-            const instIndex = activeInstruments.findIndex(i => i.id === id);
-            if (instIndex > -1) {
-                activeInstruments[instIndex].title = title;
-                activeInstruments[instIndex].description = desc;
-                activeInstruments[instIndex].categories = selectedCats;
-                activeInstruments[instIndex].author_name = authorName;
-                activeInstruments[instIndex].author_email = authorEmail;
-                activeInstruments[instIndex].time = estTime;
-
-                renderActiveLibrary();
-                editModalObj.hide();
-                showToast(`<i class="fas fa-save text-success me-1"></i> "${title}" metadata updated successfully!`);
-            }
-        } else {
-            const subIndex = pendingSubmissions.findIndex(s => s.id === id);
-            if (subIndex > -1) {
-                pendingSubmissions[subIndex].title = title;
-                pendingSubmissions[subIndex].description = desc;
-                pendingSubmissions[subIndex].categories = selectedCats;
-                pendingSubmissions[subIndex].author_name = authorName;
-                pendingSubmissions[subIndex].author_email = authorEmail;
-                pendingSubmissions[subIndex].time = estTime;
-
-                renderPendingSubmissions();
-                editModalObj.hide();
-                showToast(`<i class="fas fa-save text-success me-1"></i> Submission "${title}" metadata updated successfully!`);
-            }
-        }
-    });
+    editModalObj.hide();
+    showToast(`<i class="fas fa-save text-success me-1"></i> Submission "${title}" metadata updated successfully!`);
 });
 
 // Helper to filter currently active tab
-function triggerCurrentFilter() {
+const triggerCurrentFilter = () => {
     const activeTab = $("#adminTabs .nav-link.active").attr("id");
-    if (activeTab === "active-tab") {
+    if (activeTab === "active-tab")
         renderActiveLibrary();
-    } else {
+    else
         renderPendingSubmissions();
-    }
-}
+};
 
 // Render Active Library Table
-function renderActiveLibrary() {
+const renderActiveLibrary = () => {
     const tbody = $("#active-library-tbody");
     const query = $("#admin-search").val().toLowerCase().trim();
     tbody.empty();
@@ -141,7 +127,7 @@ function renderActiveLibrary() {
         });
 
         // Generate Versions Dropdown with submission metadata
-        let versionsDropdown = "";
+        let versionsDropdown = `<span class="badge bg-light border text-secondary">${inst.version}</span>`;
         if (inst.versions && inst.versions.length > 0) {
             let dropdownItems = "";
             inst.versions.forEach(vObj => {
@@ -175,8 +161,6 @@ function renderActiveLibrary() {
                     </ul>
                 </div>
             `;
-        } else {
-            versionsDropdown = `<span class="badge bg-light border text-secondary">${inst.version}</span>`;
         }
 
         // Status Badge
@@ -234,10 +218,10 @@ function renderActiveLibrary() {
         `;
         tbody.append(tr);
     });
-}
+};
 
 // Render Pending Submissions
-function renderPendingSubmissions() {
+const renderPendingSubmissions = () => {
     const container = $("#pending-submissions-container");
     const query = $("#admin-search").val().toLowerCase().trim();
     container.empty();
@@ -326,61 +310,59 @@ function renderPendingSubmissions() {
         `;
         container.append(card);
     });
-}
+};
 
 // Toggle Hide/Unhide status of active instrument
-function toggleHideInstrument(id) {
+const toggleHideInstrument = (id) => {
     const inst = activeInstruments.find(i => i.id === id);
-    if (inst) {
-        const willHide = inst.status !== 'hidden';
-        inst.status = willHide ? 'hidden' : 'active';
-        renderActiveLibrary();
+    if (!inst) return;
+    const willHide = inst.status !== 'hidden';
+    inst.status = willHide ? 'hidden' : 'active';
+    renderActiveLibrary();
 
-        const statusText = willHide ? 'hidden from' : 'returned to';
-        showToast(`<i class="fas ${willHide ? 'fa-eye-slash text-warning' : 'fa-eye text-success'} me-1"></i> "${inst.title}" has been ${statusText} the public library.`);
-    }
-}
+    const statusText = willHide ? 'hidden from' : 'returned to';
+    showToast(`<i class="fas ${willHide ? 'fa-eye-slash text-warning' : 'fa-eye text-success'} me-1"></i> "${inst.title}" has been ${statusText} the public library.`);
+};
 
 // Open Edit Modal
-function openEditModal(id, type = 'active') {
+const openEditModal = (id, type = 'active') => {
     const list = (type === 'active') ? activeInstruments : pendingSubmissions;
     const inst = list.find(i => i.id === id);
-    if (inst) {
-        $("#edit-id").val(inst.id);
-        $("#edit-type").val(type);
-        $("#edit-title").val(inst.title);
-        $("#edit-desc").val(inst.description);
-        $("#edit-author-name").val(inst.author_name);
-        $("#edit-author-email").val(inst.author_email);
-        $("#edit-time").val(inst.time);
+    if (!inst) return;
+    $("#edit-id").val(inst.id);
+    $("#edit-type").val(type);
+    $("#edit-title").val(inst.title);
+    $("#edit-desc").val(inst.description);
+    $("#edit-author-name").val(inst.author_name);
+    $("#edit-author-email").val(inst.author_email);
+    $("#edit-time").val(inst.time);
 
-        // Uncheck all category boxes first
-        $(".edit-cat-checkbox").prop("checked", false);
-        $(".edit-cat-checkbox").each(function() {
-            const label = $(`label[for="${$(this).attr('id')}"]`);
-            label.find('.unchecked-icon').removeClass('d-none');
-            label.find('.checked-icon').addClass('d-none');
-        });
+    // Uncheck all category boxes first
+    $(".edit-cat-checkbox").prop("checked", false);
+    $(".edit-cat-checkbox").each((idx, el) => {
+        const label = $(`label[for="${$(el).attr('id')}"]`);
+        label.find('.unchecked-icon').removeClass('d-none');
+        label.find('.checked-icon').addClass('d-none');
+    });
 
-        // Check matching category boxes
-        inst.categories.forEach(cat => {
-            const checkbox = $(`.edit-cat-checkbox[value="${cat}"]`);
-            if (checkbox.length) {
-                checkbox.prop("checked", true);
-                const label = $(`label[for="${checkbox.attr('id')}"]`);
-                label.find('.unchecked-icon').addClass('d-none');
-                label.find('.checked-icon').removeClass('d-none');
-            }
-        });
+    // Check matching category boxes
+    inst.categories.forEach(cat => {
+        const checkbox = $(`.edit-cat-checkbox[value="${cat}"]`);
+        if (checkbox.length) {
+            checkbox.prop("checked", true);
+            const label = $(`label[for="${checkbox.attr('id')}"]`);
+            label.find('.unchecked-icon').addClass('d-none');
+            label.find('.checked-icon').removeClass('d-none');
+        }
+    });
 
-        $("#edit-instrument-form").removeClass("was-validated");
-        $("#edit-categories-invalid").addClass("d-none");
-        editModalObj.show();
-    }
-}
+    $("#edit-instrument-form").removeClass("was-validated");
+    $("#edit-categories-invalid").addClass("d-none");
+    editModalObj.show();
+};
 
 // Open Fields & Metadata Preview Modal
-function openPreview(id, type) {
+const openPreview = (id, type) => {
     const list = (type === 'active') ? activeInstruments : pendingSubmissions;
     const data = list.find(i => i.id === id);
     if (!data) return;
@@ -420,76 +402,73 @@ function openPreview(id, type) {
     });
 
     // Configure mock download zip button
-    $("#modal-download-btn").off("click").on("click", function(e) {
+    $("#modal-download-btn").off("click").on("click", (e) => {
         e.preventDefault();
         downloadMockFile(data.id, data.version || '1.0.0', data.title);
     });
 
     previewModalObj.show();
-}
+};
 
 // Approve Pending Submission
-function approveSubmission(id) {
+const approveSubmission = (id) => {
     const subIndex = pendingSubmissions.findIndex(s => s.id === id);
-    if (subIndex > -1) {
-        const sub = pendingSubmissions[subIndex];
+    if (subIndex === -1) return;
+    const sub = pendingSubmissions[subIndex];
 
-        // Remove from pending
-        pendingSubmissions.splice(subIndex, 1);
+    // Remove from pending
+    pendingSubmissions.splice(subIndex, 1);
 
-        // Transform and add to active (simulate approval)
-        const newInst = {
-            id: sub.id,
-            title: sub.title,
-            categories: sub.categories,
-            versions: sub.versions,
-            description: sub.description,
-            installs: 0,
-            time: sub.time,
-            author_name: sub.author_name,
-            author_email: sub.author_email,
-            fields: sub.fields,
-            version: 'v' + sub.versions[0].version,
-            status: 'active',
-            submitted_by: sub.submitted_by,
-            submitted_date: sub.submitted_date
-        };
-        activeInstruments.push(newInst);
+    // Transform and add to active (simulate approval)
+    const newInst = {
+        id: sub.id,
+        title: sub.title,
+        categories: sub.categories,
+        versions: sub.versions,
+        description: sub.description,
+        installs: 0,
+        time: sub.time,
+        author_name: sub.author_name,
+        author_email: sub.author_email,
+        fields: sub.fields,
+        version: 'v' + sub.versions[0].version,
+        status: 'active',
+        submitted_by: sub.submitted_by,
+        submitted_date: sub.submitted_date
+    };
+    activeInstruments.push(newInst);
 
-        // Re-render
-        renderActiveLibrary();
-        renderPendingSubmissions();
+    // Re-render
+    renderActiveLibrary();
+    renderPendingSubmissions();
 
-        showToast(`<i class="fas fa-check-circle text-success me-1"></i> Submission "${sub.title}" approved and added to active library!`);
-    }
-}
+    showToast(`<i class="fas fa-check-circle text-success me-1"></i> Submission "${sub.title}" approved and added to active library!`);
+};
 
 // Reject Pending Submission
-function rejectSubmission(id) {
+const rejectSubmission = (id) => {
     const subIndex = pendingSubmissions.findIndex(s => s.id === id);
-    if (subIndex > -1) {
-        const sub = pendingSubmissions[subIndex];
+    if (subIndex === -1) return;
+    const sub = pendingSubmissions[subIndex];
 
-        // Remove from pending
-        pendingSubmissions.splice(subIndex, 1);
+    // Remove from pending
+    pendingSubmissions.splice(subIndex, 1);
 
-        // Re-render
-        renderPendingSubmissions();
+    // Re-render
+    renderPendingSubmissions();
 
-        showToast(`<i class="fas fa-trash-alt text-danger me-1"></i> Submission "${sub.title}" has been rejected.`);
-    }
-}
+    showToast(`<i class="fas fa-trash-alt text-danger me-1"></i> Submission "${sub.title}" has been rejected.`);
+};
 
 // Trigger mock ZIP package downloads for specific versions
-function downloadMockVersion(instId, versionStr) {
+const downloadMockVersion = (instId, versionStr) => {
     const inst = activeInstruments.find(i => i.id === instId);
-    if (inst) {
+    if (inst)
         downloadMockFile(instId, versionStr, inst.title);
-    }
-}
+};
 
 // Helper to generate and download mock ZIP binary
-function downloadMockFile(id, version, title) {
+const downloadMockFile = (id, version, title) => {
     const mockZipContent = "PK\x03\x04\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0e\x00\t\x00metadata.json" + JSON.stringify({
         id,
         version,
@@ -507,20 +486,20 @@ function downloadMockFile(id, version, title) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showToast(`<i class="fas fa-file-archive text-primary me-1"></i> Downloaded ZIP package for "${title}" (v${version})`);
-}
+};
 
 // Utility: Toast displayer
-function showToast(htmlMessage) {
+const showToast = (htmlMessage) => {
     const toast = $("#admin-toast");
     toast.find("#toast-message").html(htmlMessage);
     toast.addClass("show");
     setTimeout(() => {
         toast.removeClass("show");
     }, 4000);
-}
+};
 
 // Helper: Map field types to CSS badges
-function getBadgeTypeClass(type) {
+const getBadgeTypeClass = (type) => {
     switch (type.toLowerCase()) {
         case 'text':
             return 'type-text';
@@ -538,10 +517,10 @@ function getBadgeTypeClass(type) {
         default:
             return 'bg-secondary text-white';
     }
-}
+};
 
 // Helper: HTML escape helper
-function escapeHtml(str) {
+const escapeHtml = (str) => {
     if (typeof str !== 'string') return '';
     return str
         .replace(/&/g, "&amp;")
@@ -549,4 +528,15 @@ function escapeHtml(str) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
-}
+};
+
+// Expose necessary functions globally for HTML string onclick event handlers
+window.downloadMockVersion = downloadMockVersion;
+window.openEditModal = openEditModal;
+window.toggleHideInstrument = toggleHideInstrument;
+window.openPreview = openPreview;
+window.rejectSubmission = rejectSubmission;
+window.approveSubmission = approveSubmission;
+
+// Initial render call
+triggerCurrentFilter();
