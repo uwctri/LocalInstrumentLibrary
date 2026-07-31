@@ -10,6 +10,9 @@
         }
     ],
     "framework-version": 17,
+    "no-auth-pages": [
+        "index"
+    ],
     "auth-ajax-actions": [
         "install",
         "uninstall",

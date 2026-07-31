@@ -2,13 +2,38 @@
 
 /** @var \UWMadison\LocalInstrumentLibrary\LocalInstrumentLibrary $module */
 
-require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
+// Check if authenticated and in project context
+$is_authenticated = defined('USERID') && USERID !== null;
+$has_project = defined('PROJECT_ID') && PROJECT_ID > 0;
+$is_public = !$is_authenticated || !$has_project;
+
+if (!$is_public) {
+    require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
+} else {
+    // Public view: Render standalone HTML page structure and load dependencies via framework helpers
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Local Instrument Library</title>
+        <?php
+        $module->loadREDCapCSS();
+        $module->loadREDCapJS();
+        $module->loadBootstrap();
+        ?>
+    </head>
+    <body class="bg-light">
+    <?php
+}
+
 $instruments = $module->getInstruments();
 
 $module->initializeJavascriptModuleObject();
 
 // Retrieve the installed instruments list for this project
-$installed_instruments = $module->getProjectSetting('installed_instruments') ?? [];
+$installed_instruments = (!$is_public) ? ($module->getProjectSetting('installed_instruments') ?? []) : [];
 
 // Map installed status dynamically
 foreach ($instruments as &$inst) {
@@ -107,16 +132,22 @@ foreach ($unique_types as $type) {
     <!-- Header Banner -->
     <div class="lib-header p-4 p-md-5 mb-4 rounded-3 text-white position-relative">
         <h2 class="display-6 fw-bold mb-2" style="font-family: 'Outfit', sans-serif;">Local Instrument Library</h2>
-        <p class="lead mb-4" style="max-width: 750px; font-size: 1.05rem;">Browse and install pre-approved data collection instruments directly into your current REDCap project. Select from validated clinical scales, standard demographics questionnaires, and specialized screeners.</p>
+        <?php if ($is_public): ?>
+            <p class="lead mb-4" style="max-width: 750px; font-size: 1.05rem;">Browse pre-approved data collection instruments. Select from validated clinical scales, standard demographics questionnaires, and specialized screeners.</p>
+        <?php else: ?>
+            <p class="lead mb-4" style="max-width: 750px; font-size: 1.05rem;">Browse and install pre-approved data collection instruments directly into your current REDCap project. Select from validated clinical scales, standard demographics questionnaires, and specialized screeners.</p>
+        <?php endif; ?>
         <div class="d-flex gap-3 flex-wrap">
             <div class="lib-stat-badge bg-white bg-opacity-10 border border-white border-opacity-25 rounded-pill px-3 py-2 text-white" style="font-size: 0.92rem; font-weight: 500;">
                 <i class="fa-solid fa-list-ul me-2"></i>
                 <span id="stat-total" class="fw-semibold"><?= count($instruments) ?> Available Instruments</span>
             </div>
-            <div class="lib-stat-badge bg-white bg-opacity-10 border border-white border-opacity-25 rounded-pill px-3 py-2 text-white" style="font-size: 0.92rem; font-weight: 500;">
-                <i class="fa-solid fa-circle-check me-2"></i>
-                <span id="stat-installed" class="fw-semibold"><?= count($installed_instruments) ?> Installed in Project</span>
-            </div>
+            <?php if (!$is_public): ?>
+                <div class="lib-stat-badge bg-white bg-opacity-10 border border-white border-opacity-25 rounded-pill px-3 py-2 text-white" style="font-size: 0.92rem; font-weight: 500;">
+                    <i class="fa-solid fa-circle-check me-2"></i>
+                    <span id="stat-installed" class="fw-semibold"><?= count($installed_instruments) ?> Installed in Project</span>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
     <!-- Toolbar: Search and Category Filter -->
@@ -162,12 +193,14 @@ foreach ($unique_types as $type) {
                 </div>
             </div>
         </div>
-        <div class="flex-shrink-0">
-            <button class="btn btn-primary py-2 px-3 fw-semibold d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#submit-modal" style="height: 40px;">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
-                <span>Submit Instrument</span>
-            </button>
-        </div>
+        <?php if (!$is_public): ?>
+            <div class="flex-shrink-0">
+                <button class="btn btn-primary py-2 px-3 fw-semibold d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#submit-modal" style="height: 40px;">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Submit Instrument</span>
+                </button>
+            </div>
+        <?php endif; ?>
     </div>
 
     <!-- Instruments Cards Grid -->
@@ -190,11 +223,7 @@ foreach ($unique_types as $type) {
                                     <?php endforeach; ?>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
-                                    <?php if ($inst['installed']): ?>
-                                        <span class="badge bg-success text-white px-2 py-1 fw-bold rounded-pill" style="font-size: 0.7rem;">
-                                            <i class="fa-solid fa-circle-check me-1"></i>Installed
-                                        </span>
-                                    <?php endif; ?>
+
                                     <span class="version-tag badge bg-light text-secondary border border-secondary border-opacity-25 fw-semibold py-1 px-2">
                                         <?= htmlspecialchars($inst['version']); ?>
                                     </span>
@@ -229,14 +258,16 @@ foreach ($unique_types as $type) {
                                     <i class="fa-regular fa-eye me-2"></i>Preview
                                 </button>
 
-                                <?php if ($inst['installed']): ?>
-                                    <button class="btn btn-success btn-sm py-2 fw-semibold d-inline-flex align-items-center justify-content-center btn-install is-installed" style="flex: 1;" disabled>
-                                        <i class="fa-solid fa-check me-2"></i>Installed
-                                    </button>
-                                <?php else: ?>
-                                    <button class="btn btn-primary btn-sm py-2 fw-semibold d-inline-flex align-items-center justify-content-center btn-install" style="flex: 1;" onclick="installInstrument(this, '<?= $inst['id']; ?>')">
-                                        <i class="fa-solid fa-download me-2"></i>Install
-                                    </button>
+                                <?php if (!$is_public): ?>
+                                    <?php if ($inst['installed']): ?>
+                                        <button class="btn btn-success btn-sm py-2 fw-semibold d-inline-flex align-items-center justify-content-center btn-install is-installed" style="flex: 1;" disabled>
+                                            <i class="fa-solid fa-check me-2"></i>Installed
+                                        </button>
+                                    <?php else: ?>
+                                        <button class="btn btn-primary btn-sm py-2 fw-semibold d-inline-flex align-items-center justify-content-center btn-install" style="flex: 1;" onclick="installInstrument(this, '<?= $inst['id']; ?>')">
+                                            <i class="fa-solid fa-download me-2"></i>Install
+                                        </button>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -313,17 +344,21 @@ foreach ($unique_types as $type) {
                                 <p id="modal-desc" class="text-muted mb-0" style="font-size: 0.85rem; line-height: 1.5;"></p>
                             </div>
                             <div class="mt-3">
-                                <button class="btn btn-primary w-100 py-2.5 fw-semibold d-inline-flex align-items-center justify-content-center gap-2" id="modal-install-btn">
-                                    <i class="fa-solid fa-download me-2"></i>Install to Project
-                                </button>
+                                <?php if (!$is_public): ?>
+                                    <button class="btn btn-primary w-100 py-2.5 fw-semibold d-inline-flex align-items-center justify-content-center gap-2" id="modal-install-btn">
+                                        <i class="fa-solid fa-download me-2"></i>Install to Project
+                                    </button>
+                                <?php endif; ?>
                                 <a class="btn btn-outline-secondary w-100 py-2.5 fw-semibold d-inline-flex align-items-center justify-content-center gap-2 mt-2" id="modal-download-btn" href="#">
                                     <i class="fa-solid fa-file-zipper me-2"></i>Download ZIP Package
                                 </a>
-                                <div class="text-center mt-3">
-                                    <button class="btn btn-link text-danger text-opacity-75 text-decoration-none btn-sm p-0 fw-semibold d-none" id="modal-remove-btn" style="font-size: 0.78rem;">
-                                        <i class="fa-solid fa-trash-can me-1"></i>Mark as Removed
-                                    </button>
-                                </div>
+                                <?php if (!$is_public): ?>
+                                    <div class="text-center mt-3">
+                                        <button class="btn btn-link text-danger text-opacity-75 text-decoration-none btn-sm p-0 fw-semibold d-none" id="modal-remove-btn" style="font-size: 0.78rem;">
+                                            <i class="fa-solid fa-trash-can me-1"></i>Mark as Removed
+                                        </button>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
 
@@ -525,6 +560,7 @@ foreach ($unique_types as $type) {
 <script type="text/javascript">
     const module = <?= $module->getJavascriptModuleObjectName() ?>;
     const defaultRowsPerPage = <?= (int)($defaults['default_rows_per_page'] ?? 2) ?>;
+    const isPublicView = <?= json_encode($is_public); ?>;
 
     // Store instrument fields data in a global JS object for easy access in preview modal
     const instrumentFields = <?= json_encode(array_column($instruments, null, 'id')); ?>;
@@ -539,5 +575,12 @@ foreach ($unique_types as $type) {
 <script type="module" src="<?= $module->getUrl('index.js'); ?>"></script>
 
 <?php
-require_once APP_PATH_DOCROOT . 'ProjectGeneral/footer.php';
+if (!$is_public) {
+    require_once APP_PATH_DOCROOT . 'ProjectGeneral/footer.php';
+} else {
+    ?>
+    </body>
+    </html>
+    <?php
+}
 ?>

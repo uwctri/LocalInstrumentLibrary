@@ -761,36 +761,38 @@ const openPreview = (instId) => {
         list.append(li);
     });
 
-    // Configure Modal Install Button state
-    const modalInstallBtn = $("#modal-install-btn");
-    const modalRemoveBtn = $("#modal-remove-btn");
+    // Configure Modal Install Button state (only for authenticated project views)
+    if (!isPublicView) {
+        const modalInstallBtn = $("#modal-install-btn");
+        const modalRemoveBtn = $("#modal-remove-btn");
 
-    // Check if currently installed
-    const cardInstallBtn = $(".instrument-card-col[data-id='" + instId + "'] .btn-install");
-    if (cardInstallBtn.hasClass("is-installed")) {
-        modalInstallBtn.addClass("is-installed")
-            .prop("disabled", true)
-            .html('<i class="fa-solid fa-check me-2"></i>Installed');
+        // Check if currently installed
+        const cardInstallBtn = $(".instrument-card-col[data-id='" + instId + "'] .btn-install");
+        if (cardInstallBtn.hasClass("is-installed")) {
+            modalInstallBtn.addClass("is-installed")
+                .prop("disabled", true)
+                .html('<i class="fa-solid fa-check me-2"></i>Installed');
 
-        modalRemoveBtn.removeClass("d-none")
-            .off("click")
-            .on("click", () => {
-                previewModal.hide();
-                removeInstrument(instId);
-            });
-    } else {
-        modalInstallBtn.removeClass("is-installed")
-            .prop("disabled", false)
-            .html('<i class="fa-solid fa-download me-2"></i>Install to Project')
-            .off("click")
-            .on("click", () => {
-                previewModal.hide();
-                // Locate card button and trigger installation
-                const btn = $(".instrument-card-col[data-id='" + instId + "'] .btn-install")[0];
-                installInstrument(btn, instId);
-            });
+            modalRemoveBtn.removeClass("d-none")
+                .off("click")
+                .on("click", () => {
+                    previewModal.hide();
+                    removeInstrument(instId);
+                });
+        } else {
+            modalInstallBtn.removeClass("is-installed")
+                .prop("disabled", false)
+                .html('<i class="fa-solid fa-download me-2"></i>Install to Project')
+                .off("click")
+                .on("click", () => {
+                    previewModal.hide();
+                    // Locate card button and trigger installation
+                    const btn = $(".instrument-card-col[data-id='" + instId + "'] .btn-install")[0];
+                    installInstrument(btn, instId);
+                });
 
-        modalRemoveBtn.addClass("d-none");
+            modalRemoveBtn.addClass("d-none");
+        }
     }
 
     // Configure Modal Download Button click handler
@@ -863,10 +865,7 @@ const installInstrument = (buttonEl, instId) => {
             const card = $(".instrument-card-col[data-id='" + instId + "'] .instrument-card");
             card.addClass("installed");
 
-            // Add Installed Badge if it doesn't exist
-            const cardTop = $(".instrument-card-col[data-id='" + instId + "'] .card-top");
-            if (cardTop.find(".bg-success").length === 0)
-                cardTop.find(".d-flex").prepend('<span class="badge bg-success text-white px-2 py-1 fw-bold rounded-pill" style="font-size: 0.7rem;"><i class="fa-solid fa-circle-check me-1"></i>Installed</span>');
+
 
             // Finalize button state on card
             btn.addClass("is-installed")
@@ -915,9 +914,7 @@ const removeInstrument = (instId) => {
             const card = $(".instrument-card-col[data-id='" + instId + "'] .instrument-card");
             card.removeClass("installed");
 
-            // Remove Installed Badge
-            const cardTop = $(".instrument-card-col[data-id='" + instId + "'] .card-top");
-            cardTop.find(".bg-success").remove();
+
 
             // Restore install button state on card
             btn.removeClass("is-installed")
