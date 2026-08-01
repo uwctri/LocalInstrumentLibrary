@@ -900,7 +900,7 @@ const removeInstrument = (instId) => {
             btn.removeClass("is-installed")
                 .removeClass("btn-success")
                 .addClass("btn-primary")
-                .html('<i class="fa-solid fa-download me-2"></i>Install to Project')
+                .html('<i class="fa-solid fa-download me-2"></i>Install')
                 .prop("disabled", false);
 
             if (installedCount > 0)
