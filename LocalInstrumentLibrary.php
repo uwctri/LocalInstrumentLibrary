@@ -437,28 +437,121 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             ];
 
         $current_dd = $this->getMetadata($project_id);
-        $placeholder_field = $inst_id . "_placeholder";
-        $new_field = [
-            "field_name" => $placeholder_field,
-            "form_name" => $inst_id,
-            "section_header" => "",
-            "field_type" => "descriptive",
-            "field_label" => "Start of instrument: " . $target_inst['title'],
-            "select_choices_or_calculations" => "",
-            "field_note" => "",
-            "text_validation_type_or_show_slider_number" => "",
-            "text_validation_min" => "",
-            "text_validation_max" => "",
-            "identifier" => "",
-            "branching_logic" => "",
-            "required_field" => "",
-            "custom_alignment" => "",
-            "question_number" => "",
-            "matrix_group_name" => "",
-            "matrix_ranking" => "",
-            "field_annotation" => ""
-        ];
-        $current_dd[] = $new_field;
+        $new_fields = [];
+        $is_demo = !empty($target_inst['is_demo']);
+
+        if (!$is_demo) {
+            $doc_id = null;
+            if (!empty($target_inst['versions']) && is_array($target_inst['versions'])) {
+                $targetVerClean = ltrim($target_inst['version'] ?? '', 'v');
+                foreach ($target_inst['versions'] as $vObj) {
+                    $vClean = ltrim($vObj['version'] ?? '', 'v');
+                    if ($vClean === $targetVerClean && !empty($vObj['doc_id'])) {
+                        $doc_id = $vObj['doc_id'];
+                        break;
+                    }
+                }
+                if (!$doc_id) {
+                    $lastVer = end($target_inst['versions']);
+                    $doc_id = $lastVer['doc_id'] ?? null;
+                }
+            }
+
+            $csvContent = null;
+            if ($doc_id) {
+                $temp_zip = Files::copyEdocToTemp($doc_id);
+                if ($temp_zip && file_exists($temp_zip)) {
+                    $zip = new ZipArchive();
+                    if ($zip->open($temp_zip) === true) {
+                        $csvContent = $zip->getFromName('instrument.csv');
+                        $zip->close();
+                    }
+                    @unlink($temp_zip);
+                }
+            }
+
+            if (!empty($csvContent)) {
+                $lines = explode("\n", $csvContent);
+                $firstLine = true;
+                $col_map = [];
+
+                $header_field_map = [
+                    "Variable / Field Name" => "field_name",
+                    "Form Name" => "form_name",
+                    "Section Header" => "section_header",
+                    "Field Type" => "field_type",
+                    "Field Label" => "field_label",
+                    "Choices, Calculations, OR Slider Labels" => "select_choices_or_calculations",
+                    "Field Note" => "field_note",
+                    "Text Validation Type OR Show Slider Number" => "text_validation_type_or_show_slider_number",
+                    "Text Validation Min" => "text_validation_min",
+                    "Text Validation Max" => "text_validation_max",
+                    "Identifier?" => "identifier",
+                    "Branching Logic" => "branching_logic",
+                    "Required?" => "required_field",
+                    "Custom Alignment" => "custom_alignment",
+                    "Question Number" => "question_number",
+                    "Matrix Group Name" => "matrix_group_name",
+                    "Matrix Ranking?" => "matrix_ranking",
+                    "Field Annotation" => "field_annotation"
+                ];
+
+                foreach ($lines as $line) {
+                    $row = str_getcsv($line);
+                    if (empty($row) || count($row) < 2) continue;
+
+                    if ($firstLine) {
+                        $headers = array_map('trim', $row);
+                        foreach ($header_field_map as $header => $key) {
+                            $idx = array_search($header, $headers);
+                            $col_map[$key] = ($idx !== false) ? $idx : count($col_map);
+                        }
+                        $firstLine = false;
+                        continue;
+                    }
+
+                    $var = trim($row[$col_map['field_name']] ?? '');
+                    if (empty($var) || strtolower($var) === 'record_id') continue;
+
+                    $field = [];
+                    foreach ($col_map as $key => $idx) {
+                        $field[$key] = $row[$idx] ?? '';
+                    }
+                    if (empty($field['form_name']))
+                        $field['form_name'] = $inst_id;
+
+                    $new_fields[] = $field;
+                }
+            }
+        }
+
+        if (empty($new_fields)) {
+            $placeholder_field = $inst_id . "_placeholder";
+            $new_fields[] = [
+                "field_name" => $placeholder_field,
+                "form_name" => $inst_id,
+                "section_header" => "",
+                "field_type" => "descriptive",
+                "field_label" => "Start of instrument: " . $target_inst['title'],
+                "select_choices_or_calculations" => "",
+                "field_note" => "",
+                "text_validation_type_or_show_slider_number" => "",
+                "text_validation_min" => "",
+                "text_validation_max" => "",
+                "identifier" => "",
+                "branching_logic" => "",
+                "required_field" => "",
+                "custom_alignment" => "",
+                "question_number" => "",
+                "matrix_group_name" => "",
+                "matrix_ranking" => "",
+                "field_annotation" => ""
+            ];
+        }
+
+        foreach ($new_fields as $nf) {
+            $current_dd[] = $nf;
+        }
 
         list($fieldCount, $saveErrors) = MetaData::saveMetadataFlat($current_dd);
         if (!empty($saveErrors))
@@ -549,8 +642,6 @@ class LocalInstrumentLibrary extends AbstractExternalModule
     public function getDefaults()
     {
         $path = __DIR__ . '/defaults.json';
-        if (!file_exists($path))
-            return [];
         return json_decode(file_get_contents($path), true);
     }
 

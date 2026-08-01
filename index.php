@@ -574,10 +574,6 @@ foreach ($unique_types as $type) {
             let installedCount = <?= count(array_filter($instruments, function ($i) {
                                         return $i['installed'];
                                     })); ?>;
-
-            // Dump loaded JSON configurations to browser console
-            console.log("Defaults loaded from defaults.json:", <?= json_encode($defaults) ?>);
-            console.log("Instruments Metadata loaded:", <?= json_encode($instruments) ?>);
         </script>
         <script type="module" src="<?= $module->getUrl('index.js'); ?>"></script>
 
