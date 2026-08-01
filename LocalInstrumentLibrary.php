@@ -131,15 +131,18 @@ class LocalInstrumentLibrary extends AbstractExternalModule
                 $firstLine = false;
                 continue;
             }
-            $var = $row[$nameIdx] ?? '';
+            $var = trim($row[$nameIdx] ?? '');
             $typeField = $row[$typeIdx] ?? '';
             $label = $row[$labelIdx] ?? '';
-            if (!empty($var))
-                $fields[] = [
-                    'label' => $label,
-                    'variable' => $var,
-                    'type' => $typeField
-                ];
+            if (empty($var))
+                continue;
+            if (strtolower($var) === 'record_id')
+                return ['status' => 'error', 'message' => 'The instrument CSV contains a "record_id" field. Please remove it before submitting.'];
+            $fields[] = [
+                'label' => $label,
+                'variable' => $var,
+                'type' => $typeField
+            ];
         }
 
         $storage_pid = $this->getSystemSetting("storage_project");
@@ -205,6 +208,8 @@ class LocalInstrumentLibrary extends AbstractExternalModule
 
         $fields = [];
         foreach ($metadata as $f) {
+            if (strtolower(trim($f['field_name'] ?? '')) === 'record_id')
+                continue;
             $row = [
                 $f['field_name'] ?? '',
                 $f['form_name'] ?? '',
