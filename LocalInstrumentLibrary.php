@@ -13,10 +13,25 @@ class LocalInstrumentLibrary extends AbstractExternalModule
 {
     public function redcap_module_system_enable($version)
     {
-        if (!empty($this->getSystemSetting("storage_project")))
-            return;
-        $project_id = $this->createProject("Local Instrument Library", 1, "Stores local instruments for easy sharing");
-        $this->setSystemSetting("storage_project", $project_id);
+        if (empty($this->getSystemSetting("storage_project"))) {
+            $project_id = $this->createProject("Local Instrument Library", 1, "Stores local instruments for easy sharing");
+            $this->setSystemSetting("storage_project", $project_id);
+        }
+
+        if (empty($this->getSystemSetting("public_library_title")))
+            $this->setSystemSetting("public_library_title", "Local Instrument Library");
+
+        if (empty($this->getSystemSetting("public_library_blurb")))
+            $this->setSystemSetting("public_library_blurb", "Browse pre-approved data collection instruments. Select from validated clinical scales, standard demographics questionnaires, and specialized screeners.");
+
+        if (empty($this->getSystemSetting("internal_library_title")))
+            $this->setSystemSetting("internal_library_title", "Local Instrument Library");
+
+        if (empty($this->getSystemSetting("internal_library_blurb")))
+            $this->setSystemSetting("internal_library_blurb", "Browse and install pre-approved data collection instruments directly into your current REDCap project. Select from validated clinical scales, standard demographics questionnaires, and specialized screeners.");
+
+        if ($this->getSystemSetting("show_demo_instruments") === null)
+            $this->setSystemSetting("show_demo_instruments", true);
     }
 
     public function redcap_every_page_top($project_id)
@@ -472,27 +487,36 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         return ['status' => 'success', 'message' => 'Removed instrument'];
     }
 
-    public function getInstruments()
+    public function getInstruments($includeDemos = null)
     {
-        require __DIR__ . '/dummy_data.php';
-        $uploaded_instruments = $this->loadUploadedInstruments();
+        // Default to the system setting when not explicitly specified
+        if ($includeDemos === null)
+            $includeDemos = (bool)$this->getSystemSetting('show_demo_instruments');
+
         $combined = [];
-        foreach ($instruments as $inst) {
-            $combined[$inst['id']] = $inst;
-        }
-        foreach ($uploaded_instruments as $inst) {
-            $combined[$inst['id']] = $inst;
+
+        // Load demo instruments from defaults.json when enabled
+        if ($includeDemos) {
+            $defaults = $this->getDefaults();
+            $domain = $this->getContactEmailDomain();
+            foreach ($defaults['demo_instruments'] ?? [] as $inst) {
+                if (!empty($inst['author_email']))
+                    $inst['author_email'] = preg_replace('/@(.*)$/', '@' . $domain, $inst['author_email']);
+                $combined[$inst['id']] = $inst;
+            }
         }
 
-        // Dynamic version mapping for all combined instruments
+        // Uploaded (real) instruments always override demos with the same ID
+        foreach ($this->loadUploadedInstruments() as $inst)
+            $combined[$inst['id']] = $inst;
+
+        // Resolve the latest version string for every instrument
         foreach ($combined as &$inst) {
             $latest = "0.0.0";
             if (isset($inst['versions']) && is_array($inst['versions'])) {
                 foreach ($inst['versions'] as $vObj) {
                     $v = $vObj['version'];
-                    // Clean 'v' prefix if present for version comparison
                     $vClean = ltrim($v, 'v');
-                    // Helper to compare versions in PHP (inline replacement for comparePHPVersions)
                     $parts1 = explode('.', $vClean);
                     $parts2 = explode('.', $latest);
                     $isGreater = false;
@@ -523,6 +547,14 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         if (!file_exists($path))
             return [];
         return json_decode(file_get_contents($path), true);
+    }
+
+    public function getContactEmailDomain()
+    {
+        $sql = $this->query("SELECT value FROM redcap_config WHERE field_name = 'homepage_contact_email'", []);
+        $email = db_fetch_assoc($sql)['value'] ?? '';
+        $parts = explode('@', $email);
+        return count($parts) === 2 ? $this->escape($parts[1]) : 'example.edu';
     }
 
     public function loadUploadedInstruments()

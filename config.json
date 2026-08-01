@@ -20,6 +20,36 @@
     ],
     "system-settings": [
         {
+            "key": "show_demo_instruments",
+            "name": "Show Demo Instruments",
+            "type": "checkbox",
+            "repeatable": false
+        },
+        {
+            "key": "public_library_title",
+            "name": "Public Page Title",
+            "type": "text",
+            "repeatable": false
+        },
+        {
+            "key": "public_library_blurb",
+            "name": "Public Page Blurb",
+            "type": "textarea",
+            "repeatable": false
+        },
+        {
+            "key": "internal_library_title",
+            "name": "Internal Page Title",
+            "type": "text",
+            "repeatable": false
+        },
+        {
+            "key": "internal_library_blurb",
+            "name": "Internal Page Blurb",
+            "type": "textarea",
+            "repeatable": false
+        },
+        {
             "key": "categories",
             "name": "Library Categories",
             "type": "text",

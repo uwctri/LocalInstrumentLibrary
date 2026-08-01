@@ -255,29 +255,9 @@ const handleSelectedFiles = (files) => {
     }
 };
 
-// Dynamic REDCap Administrator Contact Domain extraction
-const getREDCapAdminDomain = () => {
-    try {
-        let contactLink = $("#west a:contains('Contact'), #west a:contains('contact')").first().attr("href");
-        if (!contactLink)
-            contactLink = $("a[href^='mailto:']").first().attr("href");
-        if (!contactLink || contactLink.indexOf('@') === -1)
-            return "wisconsin.edu";
-        let emailPart = contactLink.split(':')[1] || '';
-        emailPart = emailPart.split('?')[0]; // remove query parameters
-        let domain = emailPart.split('@')[1];
-        if (domain)
-            return domain.trim().toLowerCase();
-    } catch (e) {
-        console.error("Error retrieving REDCap admin domain:", e);
-    }
-    return "wisconsin.edu"; // Safe fallback domain
-};
-
 // Dynamically update email placeholder on modal show using active REDCap domain
 $("#submit-modal").on("show.bs.modal", () => {
-    const domain = getREDCapAdminDomain();
-    $("#submit-author-email").attr("placeholder", "jane.doe@" + domain);
+    $("#submit-author-email").attr("placeholder", "jane.doe@" + contactEmailDomain);
 });
 
 // Clear all validation styling from the form
@@ -378,7 +358,7 @@ $("#submit-existing-instrument").on("change", (e) => {
         $("#submit-author-email").val("");
         $("#submit-description").val("");
         $("#submit-version").val("1.0.0");
-        
+
         // Clear any invalid states on categories
         $("#categories-invalid-msg").addClass("d-none").removeClass("d-block");
         $(".submit-cat-checkbox").closest(".p-3").removeClass("border-danger");

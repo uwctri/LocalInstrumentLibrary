@@ -5,7 +5,7 @@
 // Include REDCap Control Center Header
 require_once APP_PATH_DOCROOT . 'ControlCenter/header.php';
 
-$instruments = $module->getInstruments();
+$instruments = $module->getInstruments(false);
 require_once __DIR__ . '/dummy_submissions.php';
 
 foreach ($instruments as &$inst) {
