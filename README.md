@@ -2,6 +2,7 @@
 
 * What even is the time for?
 * need option to update an instrument
+  * Option to allow an "owner" to auto-update an instrument
 * Admin workflow
   * When an instrument is submitted it needs to be added to the queue
   * When an instrument is approved it needs to appear for install
@@ -10,3 +11,4 @@
   * Add a link to the external library on the admin page
     * How to get a non-versioned link?
   * Get rid of dummy_submissions
+  * Button hovers look bad

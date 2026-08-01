@@ -51,83 +51,16 @@ $library_blurb = $module->getSystemSetting($is_public ? 'public_library_blurb' :
         ? 'Browse pre-approved data collection instruments. Select from validated clinical scales, standard demographics questionnaires, and specialized screeners.'
         : 'Browse and install pre-approved data collection instruments directly into your current REDCap project. Select from validated clinical scales, standard demographics questionnaires, and specialized screeners.');
 
-// Retrieve categories from system settings configuration
-$configured_categories = $module->getSystemSetting('categories');
-$raw_categories = [];
-
 $defaults = $module->getDefaults();
-$default_cats = $defaults['default_categories'] ?? [];
-
-if (empty($configured_categories)) {
-    // Load default categories list from defaults.json
-    foreach ($default_cats as $catName) {
-        $raw_categories[] = ["name" => $catName];
-    }
-} else {
-    // Collect non-empty category names from settings (flat array)
-    foreach ($configured_categories as $catName) {
-        $name = trim($catName);
-        if (!empty($name))
-            $raw_categories[] = ["name" => $name];
-    }
-}
-
-$nice_colors = $defaults['category_colors'] ?? [];
-$field_type_colors = $defaults['field_type_colors'] ?? [];
-
-// Map index-based color overrides and generate CSS class keys dynamically
-$categories_list = [];
-foreach ($raw_categories as $index => $cat) {
-    $color_index = $index % count($nice_colors);
-    $color = $nice_colors[$color_index];
-    $name = $cat['name'];
-
-    $categories_list[] = [
-        "name" => $name,
-        "class" => "category-" . strtolower(str_replace(' ', '', $name)),
-        "bg" => $color['bg'],
-        "text" => $color['text']
-    ];
-}
-
-// Format a CSS Blob for dynamic category styles
-$dynamic_category_styles = implode(array_map(function ($cat) {
-    return sprintf(
-        "#local-instrument-lib-container .%s,\n#preview-modal .%s {\n    background-color: %s !important;\n    color: %s !important;\n    border-color: %s !important;\n}\n\n",
-        $cat['class'],
-        $cat['class'],
-        $cat['bg'],
-        $cat['text'],
-        $cat['bg']
-    );
-}, $categories_list));
-
-// Collect all unique field types present in the loaded instruments
-$unique_types = [];
-foreach ($instruments as $inst) {
-    if (isset($inst['fields']) && is_array($inst['fields']))
-        foreach ($inst['fields'] as $field) {
-            $type = strtolower(trim($field['type'] ?? ''));
-            if (!empty($type))
-                $unique_types[$type] = $type;
-        }
-}
-
-// Generate field type styles dynamically, falling back to default configuration if not defined
-$dynamic_field_type_styles = "";
-$default_colors = $field_type_colors['default'] ?? ["bg" => "#f1f5f9", "text" => "#475569", "border" => "#cbd5e1"];
-
-foreach ($unique_types as $type) {
-    $colors = $field_type_colors[$type] ?? $default_colors;
-    $dynamic_field_type_styles .= sprintf(
-        "#local-instrument-lib-container .type-%s,\n#preview-modal .type-%s {\n    background-color: %s !important;\n    color: %s !important;\n    border-color: %s !important;\n    font-weight: 600 !important;\n}\n\n",
-        $type,
-        $type,
-        $colors['bg'],
-        $colors['text'],
-        $colors['border']
-    );
-}
+$categories_list = $module->getCategoriesList();
+$dynamic_category_styles = $module->renderCategoryCSS($categories_list, [
+    '#local-instrument-lib-container',
+    '#preview-modal'
+]);
+$dynamic_field_type_styles = $module->renderFieldTypeCSS($instruments, [
+    '#local-instrument-lib-container',
+    '#preview-modal'
+]);
     ?>
 
     <!-- Load Local Styles and Fonts -->

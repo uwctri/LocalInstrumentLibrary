@@ -13,61 +13,26 @@ foreach ($instruments as &$inst) {
 }
 unset($inst);
 
-// Retrieve categories from system settings
-$configured_categories = $module->getSystemSetting('categories');
-$raw_categories = [];
+$categories_list = $module->getCategoriesList();
+$dynamic_category_styles = $module->renderCategoryCSS($categories_list, [
+    '#local-instrument-lib-admin-container',
+    '#preview-modal',
+    '#edit-modal'
+]);
 
-$defaults = $module->getDefaults();
-$default_cats = $defaults['default_categories'] ?? [];
-
-if (empty($configured_categories)) {
-    foreach ($default_cats as $catName) {
-        $raw_categories[] = ["name" => $catName];
-    }
-} else {
-    foreach ($configured_categories as $catName) {
-        $name = trim($catName);
-        if (!empty($name))
-            $raw_categories[] = ["name" => $name];
-    }
-}
-
-// Pastel category tag color configurations
-$nice_colors = $defaults['category_colors'] ?? [];
-
-$categories_list = [];
-foreach ($raw_categories as $index => $cat) {
-    $color_index = $index % count($nice_colors);
-    $color = $nice_colors[$color_index];
-    $name = $cat['name'];
-
-    $categories_list[] = [
-        "name" => $name,
-        "class" => "category-" . strtolower(str_replace(' ', '', $name)),
-        "bg" => $color['bg'],
-        "text" => $color['text']
-    ];
-}
-
-// Format CSS for dynamic categories
-$dynamic_category_styles = implode(array_map(function ($cat) {
-    return sprintf(
-        "#local-instrument-lib-admin-container .%s,\n#preview-modal .%s,\n#edit-modal .%s {\n    background-color: %s !important;\n    color: %s !important;\n    border-color: %s !important;\n}\n\n",
-        $cat['class'],
-        $cat['class'],
-        $cat['class'],
-        $cat['bg'],
-        $cat['text'],
-        $cat['bg']
-    );
-}, $categories_list));
+$all_admin_instruments = array_merge($instruments, $dummy_submissions);
+$dynamic_field_type_styles = $module->renderFieldTypeCSS($all_admin_instruments, [
+    '#local-instrument-lib-admin-container',
+    '#preview-modal',
+    '#edit-modal'
+]);
 ?>
 
 <!-- Load Local Styles and Fonts -->
 <link rel="stylesheet" href="<?= $module->getUrl('admin.css'); ?>">
 
 <style id="dynamic-admin-styles">
-    <?= $dynamic_category_styles ?>
+    <?= $dynamic_category_styles ?><?= $dynamic_field_type_styles ?>
 </style>
 
 <div id="local-instrument-lib-admin-container" class="container-fluid px-0">
@@ -86,13 +51,13 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
         <ul class="nav nav-tabs nav-tabs-custom mb-3 border-0" id="adminTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active d-flex align-items-center" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-pane" type="button" role="tab" aria-controls="active-pane" aria-selected="true">
-                    <i class="fas fa-table me-2"></i>Active Library (<span id="active-count">0</span>)
+                    <i class="fas fa-table me-2"></i>Active Library (<span id="active-count"><?= count($instruments); ?></span>)
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link d-flex align-items-center" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-pane" type="button" role="tab" aria-controls="pending-pane" aria-selected="false">
                     <i class="fas fa-history me-2"></i>Pending Submissions
-                    <span class="badge bg-danger ms-2" id="pending-badge" style="font-size: 0.82rem; font-weight: 600; padding: 0.25rem 0.55rem; border-radius: 9999px;">0</span>
+                    <span class="badge bg-danger ms-2" id="pending-badge" style="font-size: 0.82rem; font-weight: 600; padding: 0.25rem 0.55rem; border-radius: 9999px;"><?= count($dummy_submissions); ?></span>
                 </button>
             </li>
         </ul>
@@ -108,10 +73,10 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                             <tr>
                                 <th style="width: 32%;">Instrument Details</th>
                                 <th style="width: 20%;">Categories</th>
-                                <th style="width: 18%;">Versions & Downloads</th>
-                                <th style="width: 13%;">Fields & Time</th>
-                                <th style="width: 17%;">Author</th>
-                                <th style="width: 10%; text-align: center;">Actions</th>
+                                <th style="width: 10%;">Version</th>
+                                <th style="width: 15%;">Fields & Time</th>
+                                <th style="width: 18%;">Author</th>
+                                <th style="width: 15%; text-align: center;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="active-library-tbody">
@@ -128,8 +93,22 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
 
             <!-- Pending Submissions Tab -->
             <div class="tab-pane fade" id="pending-pane" role="tabpanel" aria-labelledby="pending-tab">
-                <div class="row g-4" id="pending-submissions-container">
-                    <!-- Populated dynamically via JavaScript -->
+                <div class="border rounded-3 overflow-hidden bg-white shadow-sm">
+                    <table class="table-custom" id="pending-submissions-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th style="width: 30%;">Instrument Details</th>
+                                <th style="width: 20%;">Categories</th>
+                                <th style="width: 10%;">Version</th>
+                                <th style="width: 15%;">Fields & Time</th>
+                                <th style="width: 10%; text-align: center;">Status</th>
+                                <th style="width: 15%; text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pending-submissions-tbody">
+                            <!-- Populated dynamically via JavaScript -->
+                        </tbody>
+                    </table>
                 </div>
                 <div class="text-center py-5 text-secondary d-none bg-white border rounded-3 shadow-sm" id="pending-empty-state">
                     <i class="fas fa-check-circle display-4 mb-3 text-success opacity-75"></i>
@@ -174,10 +153,11 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
                                 <h4 class="text-secondary text-uppercase fw-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.05em;">Description</h4>
                                 <p id="modal-desc" class="text-muted mb-0" style="font-size: 0.85rem; line-height: 1.5;"></p>
                             </div>
-                            <div class="mt-3">
-                                <a class="btn btn-outline-secondary w-100 py-2.5 fw-semibold d-inline-flex align-items-center justify-content-center gap-2" id="modal-download-btn" href="#">
-                                    <i class="fas fa-file-archive me-2"></i>Download ZIP Package
-                                </a>
+                            <div class="mt-2 border-top pt-3">
+                                <h4 class="text-secondary text-uppercase fw-bold mb-2" style="font-size: 0.72rem; letter-spacing: 0.05em;">Version Downloads</h4>
+                                <div id="modal-version-downloads" class="d-flex flex-column gap-2">
+                                    <!-- Populated dynamically via JS -->
+                                </div>
                             </div>
                         </div>
 
@@ -293,6 +273,10 @@ $dynamic_category_styles = implode(array_map(function ($cat) {
     let activeInstruments = <?= json_encode(array_values($instruments)); ?>;
     let pendingSubmissions = <?= json_encode(array_values($dummy_submissions)); ?>;
 </script>
+<?php
+loadJS('webpack/js/datatables/jquery.dataTables.min.js');
+loadCSS('webpack/css/datatables/jquery.dataTables.min.css', true, false, APP_PATH_WEBPACK);
+?>
 <script type="module" src="<?= $module->getUrl('admin.js'); ?>"></script>
 
 <?php

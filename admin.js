@@ -1,9 +1,20 @@
+import { escapeHtml, getBadgeTypeClass, renderCategoryBadges, getBadgeForType, renderFieldListItem } from './utils.js';
+
 // 0. Scoped Modal References
 let previewModalObj = new bootstrap.Modal(document.getElementById('preview-modal'));
 let editModalObj = new bootstrap.Modal(document.getElementById('edit-modal'));
 
 // Bind Search to update active view dynamically
-$("#admin-search").on("input", () => triggerCurrentFilter());
+$("#admin-search").on("input", (e) => {
+    const activeTab = $("#adminTabs .nav-link.active").attr("id");
+    if (activeTab === "active-tab") {
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable('#active-library-table')) {
+            $('#active-library-table').DataTable().search(e.target.value).draw();
+        }
+    } else {
+        renderPendingSubmissions();
+    }
+});
 
 // Listen for tab switches to re-apply the search filter
 $('button[data-bs-toggle="tab"]').on('shown.bs.tab', () => triggerCurrentFilter());
@@ -89,26 +100,18 @@ const triggerCurrentFilter = () => {
         renderPendingSubmissions();
 };
 
-// Render Active Library Table
+// // Render Active Library Table
 const renderActiveLibrary = () => {
-    const tbody = $("#active-library-tbody");
-    const query = $("#admin-search").val().toLowerCase().trim();
-    tbody.empty();
+    if ($.fn.DataTable && $.fn.DataTable.isDataTable('#active-library-table')) {
+        $('#active-library-table').DataTable().destroy();
+    }
 
-    let filtered = activeInstruments.filter(inst => {
-        const matchSearch =
-            inst.id.toLowerCase().includes(query) ||
-            inst.title.toLowerCase().includes(query) ||
-            inst.description.toLowerCase().includes(query) ||
-            inst.author_name.toLowerCase().includes(query) ||
-            (inst.submitted_by && inst.submitted_by.toLowerCase().includes(query)) ||
-            (inst.categories && inst.categories.some(c => c.toLowerCase().includes(query)));
-        return matchSearch;
-    });
+    const tbody = $("#active-library-tbody");
+    tbody.empty();
 
     $("#active-count").text(activeInstruments.length);
 
-    if (filtered.length === 0) {
+    if (activeInstruments.length === 0) {
         $("#active-library-table").parent().addClass("d-none");
         $("#active-empty-state").removeClass("d-none");
         return;
@@ -117,7 +120,7 @@ const renderActiveLibrary = () => {
     $("#active-library-table").parent().removeClass("d-none");
     $("#active-empty-state").addClass("d-none");
 
-    filtered.forEach(inst => {
+    activeInstruments.forEach(inst => {
         // Generate Categories Badges
         let catBadges = "";
         inst.categories.forEach(cat => {
@@ -125,43 +128,6 @@ const renderActiveLibrary = () => {
             const cls = map ? map.class : "bg-secondary";
             catBadges += `<span class="badge ${cls} me-1 mb-1 px-2.5 py-1.5 text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.05em;">${escapeHtml(cat)}</span>`;
         });
-
-        // Generate Versions Dropdown with submission metadata
-        let versionsDropdown = `<span class="badge bg-light border text-secondary">${inst.version}</span>`;
-        if (inst.versions && inst.versions.length > 0) {
-            let dropdownItems = "";
-            inst.versions.forEach(vObj => {
-                const isLatest = ('v' + vObj.version) === inst.version;
-                const latestBadge = isLatest ? '<span class="badge bg-success ms-2 font-weight-bold" style="font-size:0.65rem;">Active</span>' : '';
-                dropdownItems += `
-                    <li>
-                        <a class="dropdown-item dropdown-version-item py-2 px-3 cursor-pointer" onclick="downloadMockVersion('${inst.id}', '${vObj.version}')">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="fw-bold font-monospace text-dark">v${vObj.version}</span>
-                                ${latestBadge}
-                            </div>
-                            <div class="text-muted small mt-1" style="font-size: 0.72rem;">
-                                <i class="fas fa-user me-1"></i>${escapeHtml(vObj.submitted_by || 'admin')}
-                                <span class="mx-1">•</span>
-                                <i class="far fa-calendar-alt me-1"></i>${escapeHtml(vObj.submitted_date || 'N/A')}
-                            </div>
-                        </a>
-                    </li>
-                `;
-            });
-
-            versionsDropdown = `
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-light border dropdown-toggle fw-semibold font-monospace" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        ${inst.version}
-                    </button>
-                    <ul class="dropdown-menu shadow-sm" style="font-size: 0.85rem; min-width: 210px;">
-                        <li class="dropdown-header text-uppercase tracking-wider fw-bold text-muted" style="font-size:0.68rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem; margin-bottom: 0.4rem;">Versions & Submissions</li>
-                        ${dropdownItems}
-                    </ul>
-                </div>
-            `;
-        }
 
         // Status Badge
         const isHidden = inst.status === 'hidden';
@@ -189,9 +155,7 @@ const renderActiveLibrary = () => {
                     <div class="d-flex flex-wrap">${catBadges}</div>
                 </td>
                 <td>
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        ${versionsDropdown}
-                    </div>
+                    <span class="badge bg-light border text-secondary fw-semibold font-monospace py-1.5 px-2.5" style="font-size:0.82rem;">${escapeHtml(inst.version)}</span>
                 </td>
                 <td>
                     <div class="fw-semibold text-dark" style="font-size:0.85rem;"><i class="fas fa-list me-1.5 opacity-50"></i>${inst.fields.length} Fields</div>
@@ -218,98 +182,114 @@ const renderActiveLibrary = () => {
         `;
         tbody.append(tr);
     });
+
+    if ($.fn.DataTable) {
+        const activeDataTable = $('#active-library-table').DataTable({
+            pageLength: 10,
+            dom: '<"p-3 d-flex justify-content-between align-items-center"l>t<"p-3 d-flex justify-content-between align-items-center"ip>',
+            columnDefs: [
+                { orderable: false, targets: 5 }
+            ],
+            language: {
+                emptyTable: "No instruments found",
+                zeroRecords: "No matching instruments found"
+            }
+        });
+
+        const query = $("#admin-search").val().trim();
+        if (query) {
+            activeDataTable.search(query).draw();
+        }
+    }
 };
 
 // Render Pending Submissions
 const renderPendingSubmissions = () => {
-    const container = $("#pending-submissions-container");
-    const query = $("#admin-search").val().toLowerCase().trim();
-    container.empty();
+    if ($.fn.DataTable && $.fn.DataTable.isDataTable('#pending-submissions-table')) {
+        $('#pending-submissions-table').DataTable().destroy();
+    }
 
-    let filtered = pendingSubmissions.filter(sub => {
-        const matchSearch =
-            sub.id.toLowerCase().includes(query) ||
-            sub.title.toLowerCase().includes(query) ||
-            sub.description.toLowerCase().includes(query) ||
-            sub.author_name.toLowerCase().includes(query) ||
-            (sub.submitted_by && sub.submitted_by.toLowerCase().includes(query)) ||
-            (sub.categories && sub.categories.some(c => c.toLowerCase().includes(query)));
-        return matchSearch;
-    });
+    const tbody = $("#pending-submissions-tbody");
+    tbody.empty();
 
     $("#pending-badge").text(pendingSubmissions.length);
 
-    if (filtered.length === 0) {
-        container.addClass("d-none");
+    if (pendingSubmissions.length === 0) {
+        $("#pending-submissions-table").parent().addClass("d-none");
         $("#pending-empty-state").removeClass("d-none");
         return;
     }
 
-    container.removeClass("d-none");
+    $("#pending-submissions-table").parent().removeClass("d-none");
     $("#pending-empty-state").addClass("d-none");
 
-    filtered.forEach(sub => {
+    pendingSubmissions.forEach(sub => {
         // Generate Categories Badges
         let catBadges = "";
         sub.categories.forEach(cat => {
             const map = categoryMapping.find(c => c.name === cat);
             const cls = map ? map.class : "bg-secondary";
-            catBadges += `<span class="badge ${cls} me-1 mb-1 px-2.5 py-1.5 text-uppercase fw-bold" style="font-size:0.68rem;">${escapeHtml(cat)}</span>`;
+            catBadges += `<span class="badge ${cls} me-1 mb-1 px-2.5 py-1.5 text-uppercase fw-bold" style="font-size:0.68rem; letter-spacing: 0.05em;">${escapeHtml(cat)}</span>`;
         });
 
-        const card = `
-            <div class="col-12 col-xl-6" id="submission-card-${sub.id}">
-                <div class="submission-card shadow-sm h-100 d-flex flex-column justify-content-between">
-                    <div>
-                        <div class="submission-card-header d-flex justify-content-between align-items-start gap-2 flex-wrap">
-                            <div>
-                                <h4 class="h5 fw-bold text-dark mb-1">${escapeHtml(sub.title)}</h4>
-                                <div class="text-secondary small font-monospace" style="font-size:0.75rem;">Submitted ID: ${escapeHtml(sub.id)}</div>
-                            </div>
-                            <span class="badge bg-warning text-dark fw-bold px-2.5 py-1.5" style="font-size:0.7rem; letter-spacing:0.03em;">
-                                <i class="far fa-clock me-1"></i>PENDING REVIEW
-                            </span>
-                        </div>
-                        <div class="submission-card-body">
-                            <div class="mb-3 d-flex flex-wrap gap-2 text-secondary small">
-                                <span><i class="fas fa-user me-1 text-muted"></i>Submitter: <strong>${escapeHtml(sub.submitted_by)}</strong></span>
-                                <span class="text-muted opacity-50">|</span>
-                                <span><i class="far fa-envelope me-1 text-muted"></i>${escapeHtml(sub.author_email)}</span>
-                                <span class="text-muted opacity-50">|</span>
-                                <span><i class="far fa-calendar-alt me-1 text-muted"></i>Subed: ${escapeHtml(sub.submitted_date)}</span>
-                            </div>
-                            <p class="text-muted mb-3 small" style="line-height:1.5; font-size:0.85rem;">
-                                ${escapeHtml(sub.description)}
-                            </p>
-                            <div class="d-flex flex-wrap mb-3">${catBadges}</div>
-                            <div class="border rounded bg-light p-2.5 mb-2 d-flex justify-content-between align-items-center" style="font-size:0.85rem;">
-                                <div>
-                                    <span class="fw-semibold text-dark"><i class="fas fa-list me-2 text-secondary"></i>${sub.fields.length} Fields</span>
-                                    <span class="text-muted mx-2">|</span>
-                                    <span class="text-muted"><i class="far fa-clock me-1.5 text-secondary"></i>${escapeHtml(sub.time)}</span>
-                                </div>
-                                <button class="btn btn-sm btn-link text-primary text-decoration-none p-0 fw-semibold" onclick="openPreview('${sub.id}', 'pending')">
-                                    <i class="fas fa-search me-1"></i>Review Fields
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="p-3 border-top bg-light bg-opacity-50 rounded-bottom-3 d-flex gap-2 justify-content-end">
-                        <button class="btn btn-outline-primary btn-sm py-2 px-3 fw-bold d-inline-flex align-items-center gap-1.5" onclick="openEditModal('${sub.id}', 'pending')">
-                            <i class="fas fa-edit"></i> Edit
+        const tr = `
+            <tr>
+                <td>
+                    <div class="fw-bold text-dark mb-1" style="font-size:0.95rem;">${escapeHtml(sub.title)}</div>
+                    <div class="text-secondary font-monospace mb-1" style="font-size:0.75rem;">ID: ${escapeHtml(sub.id)}</div>
+                    <div class="text-muted small mb-1" style="font-size:0.78rem;">${escapeHtml(sub.description)}</div>
+                </td>
+                <td>
+                    <div class="d-flex flex-wrap">${catBadges}</div>
+                </td>
+                <td>
+                    <span class="badge bg-light border text-secondary fw-semibold font-monospace py-1.5 px-2.5" style="font-size:0.82rem;">${escapeHtml(sub.version || 'v1.0.0')}</span>
+                </td>
+                <td>
+                    <div class="fw-semibold text-dark" style="font-size:0.85rem;"><i class="fas fa-list me-1.5 opacity-50"></i>${sub.fields.length} Fields</div>
+                    <div class="text-muted small" style="font-size:0.78rem;"><i class="far fa-clock me-1.5 opacity-50"></i>${escapeHtml(sub.time)}</div>
+                </td>
+                <td class="text-center">
+                    <span class="badge bg-warning text-dark fw-bold px-2 py-1" style="font-size:0.68rem; letter-spacing:0.03em;">
+                        <i class="far fa-clock me-1"></i>PENDING
+                    </span>
+                </td>
+                <td>
+                    <div class="d-flex justify-content-center gap-1">
+                        <button class="btn btn-sm btn-outline-success btn-circle-action" onclick="approveSubmission('${sub.id}')" title="Approve Submission">
+                            <i class="fas fa-check"></i>
                         </button>
-                        <button class="btn btn-outline-danger btn-sm py-2 px-3 fw-bold d-inline-flex align-items-center gap-1.5" onclick="rejectSubmission('${sub.id}')">
-                            <i class="fas fa-trash-alt"></i> Reject
+                        <button class="btn btn-sm btn-outline-danger btn-circle-action" onclick="rejectSubmission('${sub.id}')" title="Reject Submission">
+                            <i class="fas fa-times"></i>
                         </button>
-                        <button class="btn btn-success btn-sm py-2 px-4 fw-bold d-inline-flex align-items-center gap-1.5" onclick="approveSubmission('${sub.id}')">
-                            <i class="fas fa-check-circle"></i> Approve
+                        <button class="btn btn-sm btn-outline-secondary btn-circle-action" onclick="openPreview('${sub.id}', 'pending')" title="Review Fields">
+                            <i class="fas fa-search"></i>
                         </button>
                     </div>
-                </div>
-            </div>
+                </td>
+            </tr>
         `;
-        container.append(card);
+        tbody.append(tr);
     });
+
+    if ($.fn.DataTable) {
+        const pendingDataTable = $('#pending-submissions-table').DataTable({
+            pageLength: 10,
+            dom: '<"p-3 d-flex justify-content-between align-items-center"l>t<"p-3 d-flex justify-content-between align-items-center"ip>',
+            columnDefs: [
+                { orderable: false, targets: 5 }
+            ],
+            language: {
+                emptyTable: "No pending submissions found",
+                zeroRecords: "No matching pending submissions found"
+            }
+        });
+
+        const query = $("#admin-search").val().trim();
+        if (query) {
+            pendingDataTable.search(query).draw();
+        }
+    }
 };
 
 // Toggle Hide/Unhide status of active instrument
@@ -387,24 +367,42 @@ const openPreview = (id, type) => {
     fieldListContainer.empty();
     $("#modal-fields-heading").html(`<i class="fas fa-list me-2 text-primary"></i>Instrument Fields (${data.fields.length})`);
 
-    data.fields.forEach((field, index) => {
-        const badgeTypeClass = getBadgeTypeClass(field.type);
-        const li = `
-            <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-bottom px-4">
-                <div style="max-width: 75%;">
-                    <div class="fw-semibold text-dark mb-1" style="font-size:0.9rem;">${index + 1}. ${escapeHtml(field.label)}</div>
-                    <div class="text-secondary small font-monospace" style="font-size:0.75rem;">Variable Name: ${escapeHtml(field.variable)}</div>
-                </div>
-                <span class="badge ${badgeTypeClass} border py-1.5 px-2.5 text-uppercase" style="font-size:0.68rem;">${escapeHtml(field.type)}</span>
-            </li>
-        `;
-        fieldListContainer.append(li);
+    data.fields.forEach((field) => {
+        fieldListContainer.append(renderFieldListItem(field));
     });
 
-    // Configure mock download zip button
-    $("#modal-download-btn").off("click").on("click", (e) => {
-        e.preventDefault();
-        downloadMockFile(data.id, data.version || '1.0.0', data.title);
+    // Populate Version Downloads list
+    const versionsContainer = $("#modal-version-downloads");
+    versionsContainer.empty();
+
+    const versionsList = (data.versions && data.versions.length > 0) ? data.versions : [
+        { version: String(data.version || '1.0.0').replace(/^v/, ''), submitted_by: data.submitted_by || 'admin', submitted_date: data.submitted_date || 'N/A' }
+    ];
+
+    versionsList.forEach(vObj => {
+        const vStr = String(vObj.version).replace(/^v/, '');
+        const isLatest = ('v' + vStr) === data.version;
+        const latestBadge = isLatest ? '<span class="badge bg-success ms-1 font-weight-bold" style="font-size:0.6rem;">Active</span>' : '';
+
+        const item = `
+            <div class="border rounded p-2.5 bg-white d-flex align-items-center justify-content-between gap-2 shadow-sm">
+                <div>
+                    <div class="fw-bold font-monospace text-dark d-flex align-items-center" style="font-size:0.82rem;">
+                        v${vStr} ${latestBadge}
+                    </div>
+                    <div class="text-muted small" style="font-size:0.72rem;">
+                        <i class="fas fa-user me-1"></i>${escapeHtml(vObj.submitted_by || 'admin')}
+                        <span class="mx-1">•</span>
+                        <i class="far fa-calendar-alt me-1"></i>${escapeHtml(vObj.submitted_date || 'N/A')}
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-primary fw-semibold d-inline-flex align-items-center gap-1 py-1 px-2.5" onclick="downloadMockVersion('${data.id}', '${vStr}')" title="Download v${vStr} ZIP">
+                    <i class="fas fa-download"></i>
+                    <span style="font-size:0.75rem;">ZIP</span>
+                </button>
+            </div>
+        `;
+        versionsContainer.append(item);
     });
 
     previewModalObj.show();
@@ -498,38 +496,7 @@ const showToast = (htmlMessage) => {
     }, 4000);
 };
 
-// Helper: Map field types to CSS badges
-const getBadgeTypeClass = (type) => {
-    switch (type.toLowerCase()) {
-        case 'text':
-            return 'type-text';
-        case 'date':
-        case 'datetime':
-            return 'type-date';
-        case 'radio':
-            return 'type-radio';
-        case 'checkbox':
-            return 'type-checkbox';
-        case 'dropdown':
-            return 'type-dropdown';
-        case 'calc':
-            return 'type-calc';
-        default:
-            return 'bg-secondary text-white';
-    }
-};
-
-// Helper: HTML escape helper
-const escapeHtml = (str) => {
-    if (typeof str !== 'string') return '';
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-};
-
+// Helper: HTML escape helper (now imported from utils.js)
 // Expose necessary functions globally for HTML string onclick event handlers
 window.downloadMockVersion = downloadMockVersion;
 window.openEditModal = openEditModal;
@@ -538,5 +505,7 @@ window.openPreview = openPreview;
 window.rejectSubmission = rejectSubmission;
 window.approveSubmission = approveSubmission;
 
-// Initial render call
+// Initial render call and badge updates
+$("#active-count").text(activeInstruments.length);
+$("#pending-badge").text(pendingSubmissions.length);
 triggerCurrentFilter();

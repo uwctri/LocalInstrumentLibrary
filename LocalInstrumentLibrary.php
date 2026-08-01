@@ -720,4 +720,93 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             $i++;
         }
     }
+
+    public function getCategoriesList()
+    {
+        $configured = $this->getSystemSetting('categories');
+        $raw = [];
+        $defaults = $this->getDefaults();
+        $default_cats = $defaults['default_categories'] ?? [];
+
+        if (empty($configured)) {
+            foreach ($default_cats as $catName) {
+                $raw[] = ["name" => $catName];
+            }
+        } else {
+            foreach ($configured as $catName) {
+                $name = trim($catName);
+                if (!empty($name))
+                    $raw[] = ["name" => $name];
+            }
+        }
+
+        $nice_colors = $defaults['category_colors'] ?? [];
+        $categories_list = [];
+        foreach ($raw as $index => $cat) {
+            $color_index = $index % count($nice_colors);
+            $color = $nice_colors[$color_index];
+            $name = $cat['name'];
+
+            $categories_list[] = [
+                "name" => $name,
+                "class" => "category-" . strtolower(str_replace(' ', '', $name)),
+                "bg" => $color['bg'],
+                "text" => $color['text']
+            ];
+        }
+        return $categories_list;
+    }
+
+    public function renderCategoryCSS(array $categories_list, array $scope_selectors)
+    {
+        return implode(array_map(function ($cat) use ($scope_selectors) {
+            $scoped = implode(",\n", array_map(function ($sel) use ($cat) {
+                return $sel . " ." . $cat['class'];
+            }, $scope_selectors));
+            return sprintf(
+                "%s {\n    background-color: %s !important;\n    color: %s !important;\n    border-color: %s !important;\n}\n\n",
+                $scoped,
+                $cat['bg'],
+                $cat['text'],
+                $cat['bg']
+            );
+        }, $categories_list));
+    }
+
+    public function renderFieldTypeCSS(array $instruments, array $scope_selectors)
+    {
+        $defaults = $this->getDefaults();
+        $field_type_colors = $defaults['field_type_colors'] ?? [];
+        $unique_types = [];
+
+        foreach ($instruments as $inst) {
+            if (isset($inst['fields']) && is_array($inst['fields'])) {
+                foreach ($inst['fields'] as $field) {
+                    $type = strtolower(trim($field['type'] ?? ''));
+                    $cleanType = str_replace(['_', ' '], '', $type);
+                    if (!empty($cleanType))
+                        $unique_types[$cleanType] = $cleanType;
+                }
+            }
+        }
+
+        $dynamic_styles = "";
+        $default_colors = $field_type_colors['default'] ?? ["bg" => "#f1f5f9", "text" => "#475569", "border" => "#cbd5e1"];
+
+        foreach ($unique_types as $cleanType) {
+            $colors = $field_type_colors[$cleanType] ?? $default_colors;
+            $scoped = implode(",\n", array_map(function ($sel) use ($cleanType) {
+                return $sel . " .type-" . $cleanType;
+            }, $scope_selectors));
+
+            $dynamic_styles .= sprintf(
+                "%s {\n    background-color: %s !important;\n    color: %s !important;\n    border-color: %s !important;\n    font-weight: 600 !important;\n}\n\n",
+                $scoped,
+                $colors['bg'],
+                $colors['text'],
+                $colors['border']
+            );
+        }
+        return $dynamic_styles;
+    }
 }

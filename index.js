@@ -1,3 +1,5 @@
+import { escapeHtml, getBadgeTypeClass, renderCategoryBadges, getBadgeForType, renderFieldListItem } from './utils.js';
+
 // 0. Scoped Utility Helpers (Declared first to avoid initialization order ReferenceErrors)
 const getCookie = (name) => {
     let nameEQ = name + "=";
@@ -726,19 +728,7 @@ const openPreview = (instId) => {
     list.empty();
 
     data.fields.forEach((field) => {
-        const li = $('<li class="list-group-item d-flex justify-content-between align-items-center py-3 px-4 border-bottom"></li>');
-        li.append('<span class="fw-semibold text-dark text-truncate" title="' + field.label + '" style="max-width: 60%;">' + field.label + '</span>');
-
-        const info = $('<div class="d-flex align-items-center gap-2"></div>');
-        info.append('<span class="font-monospace text-primary" style="font-size: 0.78rem;">[' + field.variable + ']</span>');
-
-        // Format class based on field type for color-coding
-        const cleanType = field.type.replace('_', '').replace(' ', '').toLowerCase();
-        const typeClass = 'type-' + cleanType;
-        info.append('<span class="badge border ' + typeClass + ' text-uppercase" style="font-size: 0.68rem; padding: 4px 8px;">' + field.type + '</span>');
-        li.append(info);
-
-        list.append(li);
+        list.append(renderFieldListItem(field));
     });
 
     // Configure Modal Install Button state (only for authenticated project views)
