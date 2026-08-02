@@ -35,14 +35,14 @@ if ($is_public) {
     $htmlPage->PrintHeader();
     $header_html = ob_get_clean();
 
-    $module_css_url = $module->getUrl('style.css');
+    $module_css_url = $module->getUrl('css/style.css');
     $custom_head = '<link rel="stylesheet" href="' . $module_css_url . '">';
     $header_html = str_replace('</head>', $custom_head . '</head>', $header_html);
     echo $header_html;
 } else {
     require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
 ?>
-    <link rel="stylesheet" href="<?= $module->getUrl('style.css'); ?>">
+    <link rel="stylesheet" href="<?= $module->getUrl('css/style.css'); ?>">
 <?php
 }
 
@@ -506,8 +506,8 @@ if ($popular_method !== 'disabled' && !empty($instruments)) {
         const instrumentFields = <?= json_encode(array_column($instruments, null, 'id')); ?>;
         let installedCount = <?= count(array_filter($instruments, fn($i) => $i['installed'])); ?>;
     </script>
-    <script defer src="<?= $module->getUrl('alpine.min.js'); ?>"></script>
-    <script type="module" src="<?= $module->getUrl('index.js'); ?>"></script>
+    <script defer src="<?= $module->getUrl('js/alpine.min.js'); ?>"></script>
+    <script type="module" src="<?= $module->getUrl('js/index.js'); ?>"></script>
 
     <?php if ($is_public): ?></div><?php endif; ?>
 <?php

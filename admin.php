@@ -17,8 +17,8 @@ $dynamic_category_styles = $module->renderCategoryCSS($categories_list, ['#local
 $dynamic_field_type_styles = $module->renderFieldTypeCSS(array_merge($instruments, $dummy_submissions), ['#local-instrument-lib-admin-container', '#preview-modal', '#review-modal', '#edit-modal']);
 ?>
 
-<script defer src="<?= $module->getUrl('alpine.min.js'); ?>"></script>
-<link rel="stylesheet" href="<?= $module->getUrl('admin.css'); ?>">
+<script defer src="<?= $module->getUrl('js/alpine.min.js'); ?>"></script>
+<link rel="stylesheet" href="<?= $module->getUrl('css/admin.css'); ?>">
 <style id="dynamic-admin-styles">
     <?= $dynamic_category_styles ?><?= $dynamic_field_type_styles ?>
 </style>
@@ -543,6 +543,6 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS(array_merge($instrument
     let activeInstruments = <?= json_encode(array_values($instruments)); ?>;
     let pendingSubmissions = <?= json_encode(array_values($dummy_submissions)); ?>;
 </script>
-<script type="module" src="<?= $module->getUrl('admin.js'); ?>"></script>
+<script type="module" src="<?= $module->getUrl('js/admin.js'); ?>"></script>
 
 <?php require_once APP_PATH_DOCROOT . 'ControlCenter/footer.php'; ?>
