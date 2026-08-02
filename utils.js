@@ -25,3 +25,48 @@ export const renderFieldListItem = (field) => `
         <span class="badge ${getBadgeTypeClass(field.type)} border py-1.5 px-2.5 text-uppercase fw-bold" style="font-size:0.68rem;">${escapeHtml(field.type)}</span>
     </li>
 `;
+
+export const getCookie = (name) => {
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i].trim();
+        if (c.indexOf(name + "=") === 0) return c.substring(name.length + 1);
+    }
+    return null;
+};
+
+export const setCookie = (name, value, days) => {
+    let expires = days ? "; expires=" + new Date(Date.now() + days * 864e5).toUTCString() : "";
+    document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+};
+
+export const getCardsPerRow = () => {
+    const w = window.innerWidth;
+    return w >= 2000 ? 4 : w >= 1600 ? 3 : w >= 1100 ? 2 : 1;
+};
+
+export const renderCategoryBadgesHtml = (categories, categoryMapping) => {
+    let html = "";
+    categories.forEach(cat => {
+        const map = categoryMapping.find(c => c.name === cat);
+        html += `<span class="badge ${map ? map.class : "bg-secondary"} me-1 mb-1 px-2.5 py-1.5 text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.05em;">${escapeHtml(cat)}</span>`;
+    });
+    return html;
+};
+
+export const downloadMockFile = (id, version, title, items = []) => {
+    const item = items.find(i => i.id === id);
+    const fields = item ? item.fields : [];
+    let csvContent = "Variable / Field Name,Form Name,Section Header,Field Type,Field Label,Choices, Field Notes,Text Validation Type OR Show Slider Number,Text Validation Min,Text Validation Max,Identifier?,Branching Logic,Required Field?,Custom Alignment,Question Number,Matrix Group Name,Matrix Ranking?,Field Annotation\n";
+    if (fields && fields.length) {
+        fields.forEach(f => {
+            csvContent += `"${(f.variable || 'field').replace(/"/g, '""')}","instrument","","${(f.type || 'text').replace(/"/g, '""')}","${(f.label || 'Field Label').replace(/"/g, '""')}","","","","","","","","","","","","",""\n`;
+        });
+    } else {
+        csvContent += `"demo_variable","instrument","","text","Demo Question Label","","","","","","","","","","","","",""\n`;
+    }
+    const url = URL.createObjectURL(new Blob([csvContent], { type: "text/csv;charset=utf-8;" })), a = document.createElement("a");
+    a.href = url; a.download = `${id}_v${version}_instrument.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+};

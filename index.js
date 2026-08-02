@@ -1,23 +1,4 @@
-import { getBadgeTypeClass, renderFieldListItem, compareSemanticVersions } from './utils.js';
-
-const getCookie = (name) => {
-    const ca = document.cookie.split(';');
-    for (let i = 0; i < ca.length; i++) {
-        let c = ca[i].trim();
-        if (c.indexOf(name + "=") === 0) return c.substring(name.length + 1);
-    }
-    return null;
-};
-
-const setCookie = (name, value, days) => {
-    let expires = days ? "; expires=" + new Date(Date.now() + days * 864e5).toUTCString() : "";
-    document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
-};
-
-const getCardsPerRow = () => {
-    const w = window.innerWidth;
-    return w >= 2000 ? 4 : w >= 1600 ? 3 : w >= 1100 ? 2 : 1;
-};
+import { getBadgeTypeClass, renderFieldListItem, compareSemanticVersions, getCookie, setCookie, getCardsPerRow } from './utils.js';
 
 const showToast = (message, isError = false) => {
     const toast = $("#lib-toast"), icon = toast.find("i");

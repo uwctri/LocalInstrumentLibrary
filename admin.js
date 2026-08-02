@@ -1,4 +1,4 @@
-import { escapeHtml, renderFieldListItem, compareSemanticVersions } from './utils.js';
+import { escapeHtml, renderFieldListItem, compareSemanticVersions, renderCategoryBadgesHtml, downloadMockFile } from './utils.js';
 
 let previewModalObj = new bootstrap.Modal(document.getElementById('preview-modal'));
 let editModalObj = new bootstrap.Modal(document.getElementById('edit-modal'));
@@ -99,12 +99,7 @@ const renderActiveLibrary = () => {
     $("#active-empty-state").addClass("d-none");
 
     activeInstruments.forEach(inst => {
-        let catBadges = "";
-        inst.categories.forEach(cat => {
-            const map = categoryMapping.find(c => c.name === cat);
-            catBadges += `<span class="badge ${map ? map.class : "bg-secondary"} me-1 mb-1 px-2.5 py-1.5 text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.05em;">${escapeHtml(cat)}</span>`;
-        });
-
+        const catBadges = renderCategoryBadgesHtml(inst.categories, categoryMapping);
         const isHidden = inst.status === 'hidden';
         const statusBadge = isHidden ? `<span class="badge-status badge-status-hidden"><i class="fas fa-eye-slash"></i> Hidden</span>` : `<span class="badge-status badge-status-active"><i class="fas fa-check-circle"></i> Active</span>`;
 
@@ -163,11 +158,7 @@ const renderPendingSubmissions = () => {
     $("#pending-empty-state").addClass("d-none");
 
     pendingSubmissions.forEach(sub => {
-        let catBadges = "";
-        sub.categories.forEach(cat => {
-            const map = categoryMapping.find(c => c.name === cat);
-            catBadges += `<span class="badge ${map ? map.class : "bg-secondary"} me-1 mb-1 px-2.5 py-1.5 text-uppercase fw-bold" style="font-size:0.68rem; letter-spacing: 0.05em;">${escapeHtml(cat)}</span>`;
-        });
+        const catBadges = renderCategoryBadgesHtml(sub.categories, categoryMapping);
 
         tbody.append(`
             <tr>
@@ -211,7 +202,7 @@ const toggleHideInstrument = (id) => {
             renderActiveLibrary();
             showToast(`<i class="fas ${willHide ? 'fa-eye-slash text-warning' : 'fa-eye text-success'} me-1"></i> "${inst.title}" has been ${willHide ? 'hidden from' : 'returned to'} public library.`);
         } else {
-            showToast(`<i class="fas fa-exclamation-triangle text-danger me-1"></i> ${response ? response.message : 'Failed to update status.'}`);
+            showToast(`<i class="fas fa-exclamation-triangle text-danger me-1"></i> ${response ? response.message : 'Error updating status.'}`);
         }
     }).catch(() => {
         showToast('<i class="fas fa-exclamation-triangle text-danger me-1"></i> Error updating instrument status.');
@@ -251,13 +242,7 @@ const openPreview = (id, type) => {
     const data = ((type === 'active') ? activeInstruments : pendingSubmissions).find(i => i.id === id);
     if (!data) return;
 
-    let catsHtml = "";
-    data.categories.forEach(cat => {
-        const map = categoryMapping.find(c => c.name === cat);
-        catsHtml += `<span class="category-tag badge ${map ? map.class : "bg-secondary"} px-2.5 py-1.5 text-uppercase fw-bold" style="font-size: 0.65rem;">${escapeHtml(cat)}</span>`;
-    });
-    $("#modal-categories").html(catsHtml);
-
+    $("#modal-categories").html(renderCategoryBadgesHtml(data.categories, categoryMapping));
     $("#modal-version").text(data.version || 'v1.0.0');
     $("#modal-author").text(data.author_name);
     $("#modal-author-email").text(data.author_email);
@@ -308,12 +293,7 @@ const openReviewModal = (id) => {
     $("#review-submitter").text(sub.submitted_by || 'Unknown'); $("#review-author").text(`${sub.author_name} (${sub.author_email})`);
     $("#review-desc").text(sub.description); $("#review-decline-reason").val(defaultDeclineEmailBody);
 
-    let catsHtml = "";
-    sub.categories.forEach(cat => {
-        const map = categoryMapping.find(c => c.name === cat);
-        catsHtml += `<span class="badge ${map ? map.class : "bg-secondary"} me-1 mb-1 px-2.5 py-1 text-uppercase fw-bold" style="font-size: 0.68rem;">${escapeHtml(cat)}</span>`;
-    });
-    $("#review-categories").html(catsHtml);
+    $("#review-categories").html(renderCategoryBadgesHtml(sub.categories, categoryMapping));
 
     const list = $("#review-field-list").empty();
     sub.fields.forEach((field, index) => list.append(renderFieldListItem(field, index)));
@@ -476,25 +456,10 @@ const performReviewDecline = (sendEmail) => {
 
 const downloadMockVersion = (instId, versionStr) => {
     const inst = activeInstruments.find(i => i.id === instId) || pendingSubmissions.find(s => s.id === instId);
-    if (inst) downloadMockFile(inst.id, versionStr || inst.version || '1.0.0', inst.title);
-};
-
-const downloadMockFile = (id, version, title) => {
-    const item = pendingSubmissions.find(s => s.id === id) || activeInstruments.find(i => i.id === id);
-    const fields = item ? item.fields : [];
-    let csvContent = "Variable / Field Name,Form Name,Section Header,Field Type,Field Label,Choices, Field Notes,Text Validation Type OR Show Slider Number,Text Validation Min,Text Validation Max,Identifier?,Branching Logic,Required Field?,Custom Alignment,Question Number,Matrix Group Name,Matrix Ranking?,Field Annotation\n";
-    if (fields && fields.length) {
-        fields.forEach(f => {
-            csvContent += `"${(f.variable || 'field').replace(/"/g, '""')}","instrument","","${(f.type || 'text').replace(/"/g, '""')}","${(f.label || 'Field Label').replace(/"/g, '""')}","","","","","","","","","","","","",""\n`;
-        });
-    } else {
-        csvContent += `"demo_variable","instrument","","text","Demo Question Label","","","","","","","","","","","","",""\n`;
+    if (inst) {
+        downloadMockFile(inst.id, versionStr || inst.version || '1.0.0', inst.title, [...activeInstruments, ...pendingSubmissions]);
+        showToast(`<i class="fas fa-file-csv text-primary me-1"></i> Downloaded package for "${inst.title || inst.id}" (${versionStr || inst.version || '1.0.0'})`);
     }
-    const url = URL.createObjectURL(new Blob([csvContent], { type: "text/csv;charset=utf-8;" })), a = document.createElement("a");
-    a.href = url; a.download = `${id}_v${version}_instrument.csv`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    showToast(`<i class="fas fa-file-csv text-primary me-1"></i> Downloaded package for "${title || id}" (${version})`);
 };
 
 const showToast = (htmlMessage) => {
