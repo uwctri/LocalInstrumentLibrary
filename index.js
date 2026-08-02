@@ -159,18 +159,18 @@ $('input[name="submission-type"]').on("change", (e) => {
     const wrapper = $("#existing-instrument-wrapper"), selectEl = $("#submit-existing-instrument"), titleWrapper = $("#submit-title-wrapper"), titleInput = $("#submit-title"), versionInput = $("#submit-version"), versionInfo = $("#version-current-info"), versionInvalid = $("#version-invalid-feedback");
     clearValidationState();
     if (val === "update") {
-        wrapper.show();
+        wrapper.removeClass("d-none").show();
         selectEl.prop({ required: true, disabled: false });
-        titleWrapper.hide();
+        titleWrapper.addClass("d-none").hide();
         titleInput.prop("required", false).removeClass("is-invalid").val("");
         versionInput.removeClass("is-invalid");
         versionInvalid.text("Please specify a version.");
         triggerVersionCheck();
         return;
     }
-    wrapper.hide();
+    wrapper.addClass("d-none").hide();
     selectEl.prop({ required: false, disabled: true }).removeClass("is-invalid").val("");
-    titleWrapper.show();
+    titleWrapper.removeClass("d-none").show();
     titleInput.prop("required", true);
     versionInfo.addClass("d-none").text("");
     versionInput.removeClass("is-invalid");
@@ -379,7 +379,7 @@ const openPreview = (instId) => {
     const modalCats = $("#modal-categories").empty();
     data.categories.forEach((cat) => {
         const catName = (typeof cat === 'object' && cat !== null) ? cat.name : cat;
-        modalCats.append(`<span class="badge category-${String(catName).toLowerCase().replace(/\s+/g, '')} px-2.5 py-1.5 text-uppercase fw-bold" style="font-size: 0.7rem;">${catName}</span>`);
+        modalCats.append(`<span class="badge category-${String(catName).toLowerCase().replace(/\s+/g, '')} px-2.5 py-1.5 text-uppercase fw-bold fs-7">${catName}</span>`);
     });
 
     $("#modal-version").text(data.version);

@@ -48,6 +48,34 @@
             "repeatable": false
         },
         {
+            "key": "popular_calculation_method",
+            "name": "Popular Tag Calculation Method",
+            "type": "dropdown",
+            "choices": [
+                {
+                    "value": "disabled",
+                    "name": "Disabled (Hide Popular Tag)"
+                },
+                {
+                    "value": "relative_60",
+                    "name": "Relative (60%+ of max installs, min 5)"
+                },
+                {
+                    "value": "min_5",
+                    "name": "Fixed Threshold (5+ Installs)"
+                },
+                {
+                    "value": "min_10",
+                    "name": "Fixed Threshold (10+ Installs)"
+                },
+                {
+                    "value": "top_3",
+                    "name": "Top 3 Most Installed"
+                }
+            ],
+            "repeatable": false
+        },
+        {
             "key": "default_decline_email_body",
             "name": "Default Decline Email Body",
             "type": "textarea",
@@ -88,34 +116,6 @@
             "name": "Submission Alert Emails",
             "type": "text",
             "repeatable": true
-        },
-        {
-            "key": "popular_calculation_method",
-            "name": "Popular Tag Calculation Method",
-            "type": "dropdown",
-            "choices": [
-                {
-                    "value": "disabled",
-                    "name": "Disabled (Hide Popular Tag)"
-                },
-                {
-                    "value": "relative_60",
-                    "name": "Relative (60%+ of max installs, min 5)"
-                },
-                {
-                    "value": "min_5",
-                    "name": "Fixed Threshold (5+ Installs)"
-                },
-                {
-                    "value": "min_10",
-                    "name": "Fixed Threshold (10+ Installs)"
-                },
-                {
-                    "value": "top_3",
-                    "name": "Top 3 Most Installed"
-                }
-            ],
-            "repeatable": false
         }
     ],
     "links": {

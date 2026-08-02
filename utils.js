@@ -70,3 +70,11 @@ export const downloadMockFile = (id, version, title, items = []) => {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
+
+export const downloadMockVersion = (instId, versionStr, items = [], toastCallback = null) => {
+    const inst = items.find(i => i.id === instId);
+    if (!inst) return;
+    const vStr = versionStr || inst.version || '1.0.0';
+    downloadMockFile(inst.id, vStr, inst.title, items);
+    if (typeof toastCallback === 'function') toastCallback(`<i class="fas fa-file-csv text-primary me-1"></i> Downloaded package for "${inst.title || inst.id}" (${vStr})`);
+};

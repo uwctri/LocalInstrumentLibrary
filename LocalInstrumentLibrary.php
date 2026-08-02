@@ -48,39 +48,54 @@ class LocalInstrumentLibrary extends AbstractExternalModule
     public function redcap_module_ajax($action, $payload, $project_id)
     {
         $config = $this->getConfig();
-        if (!in_array($action, $config['auth-ajax-actions'] ?? [])) return ['status' => 'error', 'message' => 'Unauthorized or invalid action.'];
-        if ($action === 'submit') return $this->handleSubmitAction($payload, $project_id);
-        if ($action === 'install') return $this->handleInstallAction($payload, $project_id);
-        if ($action === 'uninstall') return $this->handleUninstallAction($payload, $project_id);
-        if ($action === 'save-settings') return $this->handleSaveSettingsAction($payload);
-        if ($action === 'approve-submission') return $this->handleApproveSubmissionAction($payload);
-        if ($action === 'decline-submission') return $this->handleDeclineSubmissionAction($payload);
-        if ($action === 'save-metadata') return $this->handleSaveMetadataAction($payload);
-        return ['status' => 'error', 'message' => 'Invalid action.'];
+        if (!in_array($action, $config['auth-ajax-actions'] ?? []))
+            return ['status' => 'error', 'message' => 'Unauthorized or invalid action.'];
+
+        $actions = [
+            'submit'             => fn() => $this->handleSubmitAction($payload, $project_id),
+            'install'            => fn() => $this->handleInstallAction($payload, $project_id),
+            'uninstall'          => fn() => $this->handleUninstallAction($payload, $project_id),
+            'save-settings'      => fn() => $this->handleSaveSettingsAction($payload),
+            'approve-submission' => fn() => $this->handleApproveSubmissionAction($payload),
+            'decline-submission' => fn() => $this->handleDeclineSubmissionAction($payload),
+            'save-metadata'      => fn() => $this->handleSaveMetadataAction($payload),
+        ];
+
+        return isset($actions[$action]) ? $actions[$action]() : ['status' => 'error', 'message' => 'Invalid action.'];
     }
 
     private function handleSaveSettingsAction($payload)
     {
-        if (!SUPER_USER) return ['status' => 'error', 'message' => 'Only REDCap Administrators can modify system settings.'];
-        if (isset($payload['show_demo_instruments'])) $this->setSystemSetting('show_demo_instruments', (bool)$payload['show_demo_instruments']);
-        if (isset($payload['enable_public_page'])) $this->setSystemSetting('enable_public_page', (bool)$payload['enable_public_page']);
-        if (isset($payload['public_library_title'])) $this->setSystemSetting('public_library_title', trim((string)$payload['public_library_title']));
-        if (isset($payload['public_library_blurb'])) $this->setSystemSetting('public_library_blurb', trim((string)$payload['public_library_blurb']));
-        if (isset($payload['internal_library_title'])) $this->setSystemSetting('internal_library_title', trim((string)$payload['internal_library_title']));
-        if (isset($payload['internal_library_blurb'])) $this->setSystemSetting('internal_library_blurb', trim((string)$payload['internal_library_blurb']));
+        $settingsMap = [
+            'show_demo_instruments'     => ['type' => 'bool', 'target' => 'show_demo_instruments'],
+            'enable_public_page'        => ['type' => 'bool', 'target' => 'enable_public_page'],
+            'enable_project_by_default' => ['type' => 'bool', 'target' => 'enabled'],
+            'hide_from_non_admins'      => ['type' => 'bool', 'target' => 'reserved-hide-from-non-admins-in-project-list'],
+            'public_library_title'      => ['type' => 'string', 'target' => 'public_library_title'],
+            'public_library_blurb'      => ['type' => 'string', 'target' => 'public_library_blurb'],
+            'internal_library_title'    => ['type' => 'string', 'target' => 'internal_library_title'],
+            'internal_library_blurb'    => ['type' => 'string', 'target' => 'internal_library_blurb'],
+            'categories'                => ['type' => 'array', 'target' => 'categories'],
+            'submission_alert_emails'   => ['type' => 'array', 'target' => 'submission_alert_emails'],
+            'default_decline_email_body'=> ['type' => 'string', 'target' => 'default_decline_email_body'],
+            'allow_owner_direct_update' => ['type' => 'bool', 'target' => 'allow_owner_direct_update'],
+            'sender_email_address'      => ['type' => 'string', 'target' => 'sender_email_address'],
+            'popular_calculation_method' => ['type' => 'string', 'target' => 'popular_calculation_method'],
+        ];
 
-        if (isset($payload['categories']) && is_array($payload['categories'])) {
-            $this->setSystemSetting('categories', array_values(array_filter(array_map('trim', $payload['categories']))));
+        foreach ($settingsMap as $key => $spec) {
+            if (!isset($payload[$key])) continue;
+            $val = $payload[$key];
+            $target = $spec['target'];
+
+            if ($spec['type'] === 'bool') {
+                $this->setSystemSetting($target, (bool)$val);
+            } elseif ($spec['type'] === 'string') {
+                $this->setSystemSetting($target, trim((string)$val));
+            } elseif ($spec['type'] === 'array' && is_array($val)) {
+                $this->setSystemSetting($target, array_values(array_filter(array_map('trim', $val))));
+            }
         }
-        if (isset($payload['submission_alert_emails']) && is_array($payload['submission_alert_emails'])) {
-            $this->setSystemSetting('submission_alert_emails', array_values(array_filter(array_map('trim', $payload['submission_alert_emails']))));
-        }
-        if (isset($payload['default_decline_email_body'])) {
-            $this->setSystemSetting('default_decline_email_body', trim((string)$payload['default_decline_email_body']));
-        }
-        if (isset($payload['allow_owner_direct_update'])) $this->setSystemSetting('allow_owner_direct_update', (bool)$payload['allow_owner_direct_update']);
-        if (isset($payload['sender_email_address'])) $this->setSystemSetting('sender_email_address', trim((string)$payload['sender_email_address']));
-        if (isset($payload['popular_calculation_method'])) $this->setSystemSetting('popular_calculation_method', trim((string)$payload['popular_calculation_method']));
 
         $this->log("Updated system settings", ['action' => 'save-settings']);
         return ['status' => 'success', 'message' => 'System settings saved successfully.'];
@@ -533,7 +548,6 @@ class LocalInstrumentLibrary extends AbstractExternalModule
 
     private function handleApproveSubmissionAction($payload)
     {
-        if (!SUPER_USER) return ['status' => 'error', 'message' => 'Only REDCap Administrators can approve submissions.'];
         $id = $payload['id'] ?? '';
         if (empty($id)) return ['status' => 'error', 'message' => 'Submission ID is required.'];
 
@@ -599,7 +613,6 @@ class LocalInstrumentLibrary extends AbstractExternalModule
 
     private function handleDeclineSubmissionAction($payload)
     {
-        if (!SUPER_USER) return ['status' => 'error', 'message' => 'Only REDCap Administrators can decline submissions.'];
         $id = $payload['id'] ?? '';
         if (empty($id)) return ['status' => 'error', 'message' => 'Submission ID is required.'];
 
@@ -832,10 +845,8 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         }
 
         $dynamic_styles = "";
-        $default_colors = $field_type_colors['default'] ?? ["bg" => "#f1f5f9", "text" => "#475569", "border" => "#cbd5e1"];
-
         foreach ($unique_types as $cleanType) {
-            $colors = $field_type_colors[$cleanType] ?? $default_colors;
+            $colors = $field_type_colors[$cleanType] ?? $field_type_colors['default'];
             $scoped = implode(",\n", array_map(fn($sel) => $sel . " .type-" . $cleanType, $scope_selectors));
             $dynamic_styles .= sprintf("%s { background-color: %s !important; color: %s !important; border-color: %s !important; font-weight: 600 !important; }\n", $scoped, $colors['bg'], $colors['text'], $colors['border']);
         }

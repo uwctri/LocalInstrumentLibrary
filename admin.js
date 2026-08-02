@@ -1,4 +1,4 @@
-import { escapeHtml, renderFieldListItem, compareSemanticVersions, renderCategoryBadgesHtml, downloadMockFile } from './utils.js';
+import { escapeHtml, renderFieldListItem, compareSemanticVersions, renderCategoryBadgesHtml, downloadMockFile, downloadMockVersion } from './utils.js';
 
 let previewModalObj = new bootstrap.Modal(document.getElementById('preview-modal'));
 let editModalObj = new bootstrap.Modal(document.getElementById('edit-modal'));
@@ -106,23 +106,23 @@ const renderActiveLibrary = () => {
         tbody.append(`
             <tr class="${isHidden ? "row-hidden" : ""}">
                 <td>
-                    <div class="fw-bold text-dark mb-1" style="font-size:0.95rem;">${escapeHtml(inst.title)}</div>
-                    <div class="text-secondary font-monospace mb-1" style="font-size:0.75rem;">ID: ${escapeHtml(inst.id)}</div>
-                    <div class="text-muted small mb-2" style="font-size: 0.78rem;">
+                    <div class="fw-bold text-dark mb-1 fs-95">${escapeHtml(inst.title)}</div>
+                    <div class="text-secondary font-monospace mb-1 fs-7">ID: ${escapeHtml(inst.id)}</div>
+                    <div class="text-muted small mb-2 fs-75">
                         <i class="fas fa-user me-1"></i>Submitted by: <strong>${escapeHtml(inst.submitted_by || 'admin')}</strong> on <strong>${escapeHtml(inst.submitted_date || 'N/A')}</strong>
                     </div>
                     <div class="mt-1">${statusBadge}</div>
                 </td>
                 <td><div class="d-flex flex-wrap">${catBadges}</div></td>
-                <td><span class="font-monospace text-dark fw-semibold" style="font-size:0.88rem;">${escapeHtml(inst.version)}</span></td>
-                <td><span class="fw-semibold text-dark" style="font-size:0.88rem;">${inst.fields.length}</span></td>
+                <td><span class="font-monospace text-dark fw-semibold fs-88">${escapeHtml(inst.version)}</span></td>
+                <td><span class="fw-semibold text-dark fs-88">${inst.fields.length}</span></td>
                 <td>
-                    <div class="fw-semibold text-dark" style="font-size:0.88rem;">${escapeHtml(inst.author_name)}</div>
-                    <div class="text-muted small" style="font-size:0.78rem;">${escapeHtml(inst.author_email)}</div>
+                    <div class="fw-semibold text-dark fs-88">${escapeHtml(inst.author_name)}</div>
+                    <div class="text-muted small fs-75">${escapeHtml(inst.author_email)}</div>
                 </td>
-                <td><div class="font-monospace text-dark" style="font-size:0.82rem;">${escapeHtml(inst.owner || '—')}</div></td>
+                <td><div class="font-monospace text-dark fs-8">${escapeHtml(inst.owner || '—')}</div></td>
                 <td>
-                    <div class="d-flex justify-content-center" style="gap: 8px !important;">
+                    <div class="d-flex justify-content-center gap-xs">
                         <button class="btn btn-sm btn-outline-primary btn-circle-action" onclick="openEditModal('${inst.id}', 'active')" title="Edit Metadata"><i class="fas fa-edit"></i></button>
                         <button class="btn btn-sm ${isHidden ? "btn-outline-success" : "btn-outline-warning"} btn-circle-action" onclick="toggleHideInstrument('${inst.id}')" title="${isHidden ? "Unhide" : "Hide"} Instrument"><i class="fas ${isHidden ? "fa-eye" : "fa-eye-slash"}"></i></button>
                         <button class="btn btn-sm btn-outline-secondary btn-circle-action" onclick="openPreview('${inst.id}', 'active')" title="Preview Fields"><i class="fas fa-search"></i></button>
@@ -163,13 +163,13 @@ const renderPendingSubmissions = () => {
         tbody.append(`
             <tr>
                 <td>
-                    <div class="fw-bold text-dark mb-1" style="font-size:0.95rem;">${escapeHtml(sub.title)}</div>
-                    <div class="text-secondary font-monospace mb-1" style="font-size:0.75rem;">ID: ${escapeHtml(sub.id)}</div>
-                    <div class="text-muted small mb-1" style="font-size:0.78rem;">${escapeHtml(sub.description)}</div>
+                    <div class="fw-bold text-dark mb-1 fs-95">${escapeHtml(sub.title)}</div>
+                    <div class="text-secondary font-monospace mb-1 fs-7">ID: ${escapeHtml(sub.id)}</div>
+                    <div class="text-muted small mb-1 fs-75">${escapeHtml(sub.description)}</div>
                 </td>
                 <td><div class="d-flex flex-wrap">${catBadges}</div></td>
-                <td><span class="font-monospace text-dark fw-semibold" style="font-size:0.88rem;">${escapeHtml(sub.version || 'v1.0.0')}</span></td>
-                <td><span class="fw-semibold text-dark" style="font-size:0.88rem;">${sub.fields.length}</span></td>
+                <td><span class="font-monospace text-dark fw-semibold fs-88">${escapeHtml(sub.version || 'v1.0.0')}</span></td>
+                <td><span class="fw-semibold text-dark fs-88">${sub.fields.length}</span></td>
                 <td class="text-center">
                     <div class="d-flex justify-content-center">
                         <button class="btn btn-sm btn-outline-primary btn-circle-action" onclick="openReviewModal('${sub.id}')" title="Review Submission"><i class="fas fa-clipboard-check"></i></button>
@@ -262,17 +262,17 @@ const openPreview = (id, type) => {
         versionsContainer.append(`
             <div class="border rounded-3 p-3 bg-white d-flex align-items-center justify-content-between gap-3 shadow-sm mb-2">
                 <div>
-                    <div class="fw-bold font-monospace text-dark d-flex align-items-center" style="font-size:0.9rem;">
-                        v${vStr} ${isLatest ? '<span class="badge bg-success ms-2 font-weight-bold" style="font-size:0.65rem;">Active</span>' : ''}
+                    <div class="fw-bold font-monospace text-dark d-flex align-items-center fs-9">
+                        v${vStr} ${isLatest ? '<span class="badge bg-success ms-2 font-weight-bold fs-xs">Active</span>' : ''}
                     </div>
-                    <div class="text-muted small mt-1" style="font-size:0.78rem;">
+                    <div class="text-muted small mt-1 fs-75">
                         <i class="fas fa-user me-1 text-secondary opacity-75"></i>${escapeHtml(vObj.submitted_by || 'admin')}
                         <span class="mx-1.5 text-muted opacity-50">•</span>
                         <i class="far fa-calendar-alt me-1 text-secondary opacity-75"></i>${escapeHtml(vObj.submitted_date || 'N/A')}
                     </div>
                 </div>
                 <button class="btn btn-sm btn-outline-primary fw-semibold d-inline-flex align-items-center gap-1.5 py-1.5 px-3" onclick="downloadMockVersion('${data.id}', '${vStr}')" title="Download v${vStr} ZIP">
-                    <i class="fas fa-download"></i><span style="font-size:0.8rem;">ZIP</span>
+                    <i class="fas fa-download"></i><span class="fs-8">ZIP</span>
                 </button>
             </div>
         `);
@@ -372,7 +372,7 @@ const renderStep2Confirmation = () => {
         container.html(`
             <div class="card border-success border-opacity-25 bg-success bg-opacity-10 p-4 rounded-3 mb-4 shadow-sm">
                 <div class="d-flex align-items-center gap-3 mb-3 pb-3 border-bottom border-success border-opacity-25">
-                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;"><i class="fas fa-check fs-5"></i></div>
+                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 icon-circle-md"><i class="fas fa-check fs-5"></i></div>
                     <div><h5 class="fw-bold text-success-emphasis m-0">Publish Instrument</h5><p class="text-secondary small m-0">Publish this submission into active library.</p></div>
                 </div>
                 <div class="mb-4">
@@ -398,12 +398,12 @@ const renderStep2Confirmation = () => {
         container.html(`
             <div class="card border-danger border-opacity-25 bg-danger bg-opacity-10 p-4 rounded-3 mb-4 shadow-sm">
                 <div class="d-flex align-items-center gap-3 mb-3 pb-3 border-bottom border-danger border-opacity-25">
-                    <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;"><i class="fas fa-times fs-5"></i></div>
+                    <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 icon-circle-md"><i class="fas fa-times fs-5"></i></div>
                     <div><h5 class="fw-bold text-danger-emphasis m-0">Decline Submission</h5><p class="text-secondary small m-0">Reject and remove from pending queue.</p></div>
                 </div>
                 <div class="mb-4">
                     <div class="mb-3">
-                        <label for="review-decline-reason" class="form-label small fw-bold text-secondary mb-1" style="font-size:0.72rem; letter-spacing:0.05em;">Feedback Reason for Submitter (Optional)</label>
+                        <label for="review-decline-reason" class="form-label small fw-bold text-secondary mb-1 fs-xs tracking-wide">Feedback Reason for Submitter (Optional)</label>
                         <textarea class="form-control border-secondary border-opacity-25 p-3 small bg-white text-dark" id="review-decline-reason" rows="4" placeholder="Explain why this submission was declined...">${escapeHtml(currentReason)}</textarea>
                     </div>
                     <div class="alert alert-danger bg-white border-danger border-opacity-50 text-danger-emphasis rounded-3 p-3 small mb-0">
@@ -454,13 +454,6 @@ const performReviewDecline = (sendEmail) => {
     });
 };
 
-const downloadMockVersion = (instId, versionStr) => {
-    const inst = activeInstruments.find(i => i.id === instId) || pendingSubmissions.find(s => s.id === instId);
-    if (inst) {
-        downloadMockFile(inst.id, versionStr || inst.version || '1.0.0', inst.title, [...activeInstruments, ...pendingSubmissions]);
-        showToast(`<i class="fas fa-file-csv text-primary me-1"></i> Downloaded package for "${inst.title || inst.id}" (${versionStr || inst.version || '1.0.0'})`);
-    }
-};
 
 const showToast = (htmlMessage) => {
     const toast = $("#admin-toast");
@@ -474,7 +467,7 @@ const renderSettingsCategories = () => {
     if (!configuredCategories || configuredCategories.length === 0) return listContainer.html('<span class="text-muted small">No categories configured.</span>');
     configuredCategories.forEach((cat) => {
         listContainer.append(`
-            <span class="badge bg-white border text-dark p-2 d-inline-flex align-items-center gap-1.5 shadow-sm" style="font-size:0.82rem;">
+            <span class="badge bg-white border text-dark p-2 d-inline-flex align-items-center gap-1.5 shadow-sm fs-8">
                 ${escapeHtml(cat)}
                 <i class="fas fa-times text-muted cursor-pointer ms-1 hover-danger" onclick="removeSettingCategory('${escapeHtml(cat)}')" title="Remove Category"></i>
             </span>
@@ -506,8 +499,8 @@ const renderSettingsAlertEmails = () => {
     if (!configuredAlertEmails || configuredAlertEmails.length === 0) return listContainer.html('<span class="text-muted small">No alert emails configured. Notifications disabled.</span>');
     configuredAlertEmails.forEach((email) => {
         listContainer.append(`
-            <span class="badge bg-white border text-dark p-2 d-inline-flex align-items-center gap-1.5 shadow-sm" style="font-size:0.82rem;">
-                <i class="fas fa-envelope text-secondary me-1" style="font-size:0.75rem;"></i>${escapeHtml(email)}
+            <span class="badge bg-white border text-dark p-2 d-inline-flex align-items-center gap-1.5 shadow-sm fs-8">
+                <i class="fas fa-envelope text-secondary me-1 fs-7"></i>${escapeHtml(email)}
                 <i class="fas fa-times text-muted cursor-pointer ms-1 hover-danger" onclick="removeSettingAlertEmail('${escapeHtml(email)}')" title="Remove Email"></i>
             </span>
         `);
@@ -540,6 +533,8 @@ $("#settings-form").on("submit", function (e) {
     const payload = {
         show_demo_instruments: $("#setting-show-demo").is(":checked"),
         enable_public_page: $("#setting-enable-public").is(":checked"),
+        enable_project_by_default: $("#setting-enable-by-default").is(":checked"),
+        hide_from_non_admins: $("#setting-hide-from-non-admins").is(":checked"),
         public_library_title: $("#setting-public-title").val().trim(),
         public_library_blurb: $("#setting-public-blurb").val().trim(),
         internal_library_title: $("#setting-internal-title").val().trim(),
@@ -570,7 +565,7 @@ $('button[data-bs-toggle="tab"]').on('shown.bs.tab', (e) => {
     $("#save-settings-btn-container").toggleClass("d-none", !isSettings);
 });
 
-window.downloadMockVersion = downloadMockVersion;
+window.downloadMockVersion = (instId, versionStr) => downloadMockVersion(instId, versionStr, [...activeInstruments, ...pendingSubmissions], showToast);
 window.openEditModal = openEditModal;
 window.toggleHideInstrument = toggleHideInstrument;
 window.openPreview = openPreview;
