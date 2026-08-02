@@ -19,8 +19,14 @@
 .col-md-9,
 #sub-viewport,
 .viewport {
-    max-width: 100% !important;
-    width: 100% !important;
+    max-width: 90% !important;
+    width: 90% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+#control_center_window {
+    max-width: 1000px !important;
 }
 
 #local-instrument-lib-admin-container {
@@ -31,9 +37,82 @@
     box-sizing: border-box;
 }
 
-#local-instrument-lib-admin-container .admin-header {
-    background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
-    border-radius: 0.5rem;
+/* Search Bar Styling (Active vs Disabled) */
+#admin-search-wrapper #admin-search {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+#admin-search-wrapper #admin-search:focus {
+    background-color: #ffffff !important;
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15) !important;
+}
+
+#admin-search-wrapper #admin-search:disabled {
+    background-color: #e2e8f0 !important;
+    border-color: #cbd5e1 !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed !important;
+    opacity: 0.65 !important;
+}
+
+/* Custom clean button hover & focus styling across all admin modals */
+.modal-footer .btn:focus,
+.modal-footer .btn:focus-visible,
+.modal-footer .btn:active {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.modal-footer .btn-light,
+.modal-footer .btn-light:hover,
+.modal-footer .btn-light:focus,
+.modal-footer .btn-light:active {
+    background-color: #e2e8f0 !important;
+    border-color: #cbd5e1 !important;
+    color: #1e293b !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.modal-footer .btn-outline-secondary,
+.modal-footer .btn-outline-secondary:hover,
+.modal-footer .btn-outline-secondary:focus,
+.modal-footer .btn-outline-secondary:active {
+    background-color: #f1f5f9 !important;
+    border-color: #64748b !important;
+    color: #334155 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.modal-footer .btn-success,
+.modal-footer .btn-success:hover,
+.modal-footer .btn-success:focus,
+.modal-footer .btn-success:active {
+    background-color: #15803d !important;
+    border-color: #15803d !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.modal-footer .btn-danger,
+.modal-footer .btn-danger:hover,
+.modal-footer .btn-danger:focus,
+.modal-footer .btn-danger:active {
+    background-color: #b91c1c !important;
+    border-color: #b91c1c !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+#admin-search-wrapper.disabled-wrapper #admin-search-icon {
+    opacity: 0.4 !important;
 }
 
 /* Tabs styling overrides */
@@ -201,6 +280,33 @@
     background-color: #f1f5f9;
 }
 
+/* Public Library Link Button Styling */
+.btn-public-link {
+    background-color: #f8fafc !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+.btn-public-link:hover,
+.btn-public-link:focus,
+.btn-public-link:active {
+    background-color: #4f46e5 !important;
+    color: #ffffff !important;
+    border-color: #4f46e5 !important;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2) !important;
+    outline: none !important;
+}
+
+/* Action Buttons & Focus Overrides */
+#local-instrument-lib-admin-container .btn:focus,
+#local-instrument-lib-admin-container .btn:active,
+#local-instrument-lib-admin-container .btn-circle-action:focus,
+#local-instrument-lib-admin-container .btn-circle-action:active {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 .btn-circle-action {
     width: 34px;
     height: 34px;
@@ -209,11 +315,44 @@
     align-items: center;
     justify-content: center;
     padding: 0;
-    transition: all 0.2s;
+    transition: all 0.2s ease-in-out;
+    outline: none !important;
+    box-shadow: none !important;
 }
 
-.btn-circle-action:hover {
-    background-color: #e2e8f0;
+#local-instrument-lib-admin-container .btn-outline-primary:hover,
+#local-instrument-lib-admin-container .btn-outline-primary:focus {
+    background-color: #4f46e5 !important;
+    border-color: #4f46e5 !important;
+    color: #ffffff !important;
+}
+
+#local-instrument-lib-admin-container .btn-outline-success:hover,
+#local-instrument-lib-admin-container .btn-outline-success:focus {
+    background-color: #10b981 !important;
+    border-color: #10b981 !important;
+    color: #ffffff !important;
+}
+
+#local-instrument-lib-admin-container .btn-outline-danger:hover,
+#local-instrument-lib-admin-container .btn-outline-danger:focus {
+    background-color: #ef4444 !important;
+    border-color: #ef4444 !important;
+    color: #ffffff !important;
+}
+
+#local-instrument-lib-admin-container .btn-outline-warning:hover,
+#local-instrument-lib-admin-container .btn-outline-warning:focus {
+    background-color: #f59e0b !important;
+    border-color: #f59e0b !important;
+    color: #ffffff !important;
+}
+
+#local-instrument-lib-admin-container .btn-outline-secondary:hover,
+#local-instrument-lib-admin-container .btn-outline-secondary:focus {
+    background-color: #64748b !important;
+    border-color: #64748b !important;
+    color: #ffffff !important;
 }
 
 /* Custom Category Checkbox styling (matches submission form size & padding) */
@@ -325,4 +464,92 @@ table.dataTable tbody tr:hover {
     border-color: #e2e8f0 !important;
     opacity: 0.6;
     cursor: not-allowed !important;
+}
+
+/* Review Modal Custom Button & Focus Glow Overrides */
+#review-modal .btn,
+#review-modal .btn:hover,
+#review-modal .btn:focus,
+#review-modal .btn:focus-visible,
+#review-modal .btn:active,
+#review-modal a.btn,
+#review-modal a.btn:hover,
+#review-modal a.btn:focus,
+#review-modal a.btn:focus-visible,
+#review-modal a.btn:active {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* Approve Toggle Tab & Action Button */
+#review-modal .btn-success,
+#review-modal #review-tab-approve.active {
+    background-color: #16a34a !important;
+    border-color: #16a34a !important;
+    color: #ffffff !important;
+}
+
+#review-modal .btn-success:hover,
+#review-modal .btn-success:focus,
+#review-modal #review-tab-approve.active:hover {
+    background-color: #15803d !important;
+    border-color: #15803d !important;
+    color: #ffffff !important;
+}
+
+#review-modal #review-tab-approve:not(.active) {
+    background-color: transparent !important;
+    border-color: #16a34a !important;
+    color: #16a34a !important;
+}
+
+#review-modal #review-tab-approve:not(.active):hover {
+    background-color: #f0fdf4 !important;
+    border-color: #16a34a !important;
+    color: #15803d !important;
+}
+
+/* Decline Toggle Tab & Action Button */
+#review-modal .btn-danger,
+#review-modal #review-tab-decline.active {
+    background-color: #dc2626 !important;
+    border-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+#review-modal .btn-danger:hover,
+#review-modal .btn-danger:focus,
+#review-modal #review-tab-decline.active:hover {
+    background-color: #b91c1c !important;
+    border-color: #b91c1c !important;
+    color: #ffffff !important;
+}
+
+#review-modal #review-tab-decline:not(.active) {
+    background-color: transparent !important;
+    border-color: #dc2626 !important;
+    color: #dc2626 !important;
+}
+
+#review-modal #review-tab-decline:not(.active):hover {
+    background-color: #fef2f2 !important;
+    border-color: #dc2626 !important;
+    color: #b91c1c !important;
+}
+
+/* Download Package Buttons Hover */
+#review-version-downloads .btn,
+#review-version-downloads a.btn {
+    background-color: #ffffff;
+    border-color: #cbd5e1 !important;
+    color: #334155 !important;
+    transition: all 0.15s ease-in-out;
+}
+
+#review-version-downloads .btn:hover,
+#review-version-downloads a.btn:hover {
+    background-color: #f8fafc !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
 }

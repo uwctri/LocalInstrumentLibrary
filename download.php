@@ -6,9 +6,10 @@ use Files;
 
 /** @var \UWMadison\LocalInstrumentLibrary\LocalInstrumentLibrary $module */
 
-$doc_id = $_GET['doc_id'] ?? null;
-if (empty($doc_id))
-    exit("Missing document ID.");
+if (empty($_GET['doc_id']))
+    throw new \Exception("Missing doc_id parameter for file download.");
+
+$doc_id = $_GET['doc_id'];
 
 // Fetch file attributes and contents using the REDCap core Files class
 $fileAttrs = Files::getEdocContentsAttributes($doc_id);

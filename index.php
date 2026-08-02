@@ -7,11 +7,46 @@ $is_authenticated = defined('USERID') && USERID !== null;
 $has_project = defined('PROJECT_ID') && PROJECT_ID > 0;
 $is_public = !$is_authenticated || !$has_project;
 
+if ($is_public) {
+    $enable_public = $module->getSystemSetting('enable_public_page');
+    if ($enable_public === null) $enable_public = true;
+    if (!$enable_public) {
+        header("HTTP/1.1 403 Forbidden");
+?>
+        <!DOCTYPE html>
+        <html lang="en">
+
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Public Access Disabled - Local Instrument Library</title>
+            <?php $module->loadBootstrap(); ?>
+        </head>
+
+        <body class="bg-light d-flex align-items-center justify-content-center min-vh-100 p-4">
+            <div class="card border-0 shadow-lg rounded-3 text-center p-5 bg-white" style="max-width: 500px;">
+                <div class="mb-3 text-warning">
+                    <i class="fas fa-lock display-3 opacity-75"></i>
+                </div>
+                <h3 class="fw-bold text-dark mb-2">Public Access Disabled</h3>
+                <p class="text-muted mb-4">The public view of the Local Instrument Library has been disabled by the site administrator.</p>
+                <?php if ($is_authenticated): ?>
+                    <p class="small text-secondary mb-0"><i class="fas fa-info-circle me-1"></i>Please access the library from within an active REDCap project.</p>
+                <?php endif; ?>
+            </div>
+        </body>
+
+        </html>
+    <?php
+        exit;
+    }
+}
+
 if (!$is_public) {
     require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
 } else {
     // Public view: Render standalone HTML page structure and load dependencies via framework helpers
-?>
+    ?>
     <!DOCTYPE html>
     <html lang="en">
 
@@ -44,12 +79,8 @@ foreach ($instruments as &$inst) {
 unset($inst);
 
 // Load configurable title and blurb from system settings
-$library_title = $module->getSystemSetting($is_public ? 'public_library_title' : 'internal_library_title')
-    ?: 'Local Instrument Library';
-$library_blurb = $module->getSystemSetting($is_public ? 'public_library_blurb' : 'internal_library_blurb')
-    ?: ($is_public
-        ? 'Browse pre-approved data collection instruments. Select from validated clinical scales, standard demographics questionnaires, and specialized screeners.'
-        : 'Browse and install pre-approved data collection instruments directly into your current REDCap project. Select from validated clinical scales, standard demographics questionnaires, and specialized screeners.');
+$library_title = (string)$module->getSystemSetting($is_public ? 'public_library_title' : 'internal_library_title');
+$library_blurb = (string)$module->getSystemSetting($is_public ? 'public_library_blurb' : 'internal_library_blurb');
 
 $defaults = $module->getDefaults();
 $categories_list = $module->getCategoriesList();
@@ -143,6 +174,13 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS($instruments, [
             </div>
 
             <!-- Instruments Cards Grid -->
+            <?php
+            $all_installs = array_map(function ($i) {
+                return (int)($i['installs'] ?? 0);
+            }, $instruments);
+            $max_installs = !empty($all_installs) ? max($all_installs) : 0;
+            $popular_threshold = max(5, floor($max_installs * 0.6));
+            ?>
             <div class="row g-4" id="instruments-grid">
                 <?php foreach ($instruments as $inst): ?>
                     <div class="col instrument-card-col"
@@ -178,15 +216,22 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS($instruments, [
                                 </div>
 
                                 <div>
-                                    <div class="card-meta d-flex justify-content-between border-top pt-3 mb-3 text-secondary" style="font-size: 0.8rem;">
+                                    <div class="card-meta d-flex justify-content-between align-items-center border-top pt-3 mb-3 text-secondary" style="font-size: 0.8rem;">
                                         <div class="meta-item d-flex align-items-center gap-1">
                                             <i class="fa-solid fa-list-check opacity-75"></i>
                                             <span><?= count($inst['fields']); ?> Fields</span>
                                         </div>
-                                        <div class="meta-item d-flex align-items-center gap-1">
-                                            <i class="fa-solid fa-clock opacity-75"></i>
-                                            <span><?= $inst['time']; ?></span>
-                                        </div>
+                                        <?php
+                                        $installs_count = (int)($inst['installs'] ?? 0);
+                                        $is_popular = ($installs_count >= 5 && $installs_count >= $popular_threshold);
+                                        if ($is_popular):
+                                        ?>
+                                            <div class="meta-item d-flex align-items-center gap-1">
+                                                <span class="badge bg-warning text-dark fw-bold px-2 py-1" style="font-size: 0.68rem; letter-spacing: 0.03em;">
+                                                    <i class="fa-solid fa-fire text-danger me-1"></i>Popular
+                                                </span>
+                                            </div>
+                                        <?php endif; ?>
                                         <div class="meta-item d-flex align-items-center gap-1">
                                             <i class="fa-solid fa-arrow-down-long opacity-75"></i>
                                             <span><?= $inst['installs']; ?> Installs</span>

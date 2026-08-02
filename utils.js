@@ -2,6 +2,20 @@
  * Local Instrument Library - Shared Utilities Module
  */
 
+export const compareSemanticVersions = (v1, v2) => {
+    const clean1 = String(v1 || '').replace(/^v/i, '');
+    const clean2 = String(v2 || '').replace(/^v/i, '');
+    const parts1 = clean1.split('.').map(Number);
+    const parts2 = clean2.split('.').map(Number);
+    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+        const p1 = parts1[i] || 0;
+        const p2 = parts2[i] || 0;
+        if (p1 > p2) return 1;
+        if (p1 < p2) return -1;
+    }
+    return 0;
+};
+
 export const escapeHtml = (str) => {
     if (typeof str !== 'string') return '';
     return str
@@ -14,7 +28,7 @@ export const escapeHtml = (str) => {
 
 export const getBadgeTypeClass = (type) => {
     if (!type) return 'type-default';
-    const cleanType = type.replace(/_/g, '').replace(/\s+/g, '').toLowerCase();
+    const cleanType = String(type).toLowerCase().replace(/[_ ]/g, '').trim();
     return 'type-' + cleanType;
 };
 
@@ -32,7 +46,7 @@ export const renderCategoryBadges = (categories, categoryMapping = []) => {
 
 export const getBadgeForType = (type) => {
     const badgeTypeClass = getBadgeTypeClass(type);
-    return `<span class="badge border ${badgeTypeClass} text-uppercase" style="font-size: 0.68rem; padding: 4px 8px;">${escapeHtml(type)}</span>`;
+    return `<span class="badge ${badgeTypeClass} text-uppercase" style="font-size: 0.68rem; padding: 4px 8px;">${escapeHtml(type)}</span>`;
 };
 
 export const renderFieldListItem = (field) => {
@@ -43,7 +57,7 @@ export const renderFieldListItem = (field) => {
                 <div class="fw-semibold text-dark mb-1" style="font-size:0.9rem;">${escapeHtml(field.label)}</div>
                 <div class="text-secondary small font-monospace" style="font-size:0.75rem;">Variable Name: ${escapeHtml(field.variable)}</div>
             </div>
-            <span class="badge ${badgeTypeClass} border py-1.5 px-2.5 text-uppercase" style="font-size:0.68rem;">${escapeHtml(field.type)}</span>
+            <span class="badge ${badgeTypeClass} border py-1.5 px-2.5 text-uppercase fw-bold" style="font-size:0.68rem;">${escapeHtml(field.type)}</span>
         </li>
     `;
 };

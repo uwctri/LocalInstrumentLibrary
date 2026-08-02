@@ -1,4 +1,4 @@
-import { escapeHtml, getBadgeTypeClass, renderCategoryBadges, getBadgeForType, renderFieldListItem } from './utils.js';
+import { escapeHtml, getBadgeTypeClass, renderCategoryBadges, getBadgeForType, renderFieldListItem, compareSemanticVersions } from './utils.js';
 
 // 0. Scoped Utility Helpers (Declared first to avoid initialization order ReferenceErrors)
 const getCookie = (name) => {
@@ -22,19 +22,7 @@ const setCookie = (name, value, days) => {
     document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
 };
 
-const compareSemanticVersions = (v1, v2) => {
-    const clean1 = String(v1).replace(/^v/i, '');
-    const clean2 = String(v2).replace(/^v/i, '');
-    const parts1 = clean1.split('.').map(Number);
-    const parts2 = clean2.split('.').map(Number);
-    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-        const p1 = parts1[i] || 0;
-        const p2 = parts2[i] || 0;
-        if (p1 > p2) return 1;
-        if (p1 < p2) return -1;
-    }
-    return 0;
-};
+
 
 const getCardsPerRow = () => {
     const width = window.innerWidth;
@@ -542,7 +530,6 @@ $("#submit-instrument-form").on("submit", (e) => {
         author_name: authorNameInput.val(),
         author_email: authorEmailInput.val(),
         version: $("#submit-version").val(),
-        time: $("#submit-time").val(),
         categories: categories,
         existingId: existingInstrumentSelect.val()
     };

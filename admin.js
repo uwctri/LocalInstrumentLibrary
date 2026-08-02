@@ -1,8 +1,9 @@
-import { escapeHtml, getBadgeTypeClass, renderCategoryBadges, getBadgeForType, renderFieldListItem } from './utils.js';
+import { escapeHtml, getBadgeTypeClass, renderCategoryBadges, getBadgeForType, renderFieldListItem, compareSemanticVersions } from './utils.js';
 
 // 0. Scoped Modal References
 let previewModalObj = new bootstrap.Modal(document.getElementById('preview-modal'));
 let editModalObj = new bootstrap.Modal(document.getElementById('edit-modal'));
+let reviewModalObj = new bootstrap.Modal(document.getElementById('review-modal'));
 
 // Bind Search to update active view dynamically
 $("#admin-search").on("input", (e) => {
@@ -59,7 +60,7 @@ $("#edit-instrument-form").on("submit", (e) => {
     const desc = $("#edit-desc").val();
     const authorName = $("#edit-author-name").val();
     const authorEmail = $("#edit-author-email").val();
-    const estTime = $("#edit-time").val();
+    const owner = $("#edit-owner").val().trim();
 
     if (type === 'active') {
         const instIndex = activeInstruments.findIndex(i => i.id === id);
@@ -69,11 +70,25 @@ $("#edit-instrument-form").on("submit", (e) => {
         activeInstruments[instIndex].categories = selectedCats;
         activeInstruments[instIndex].author_name = authorName;
         activeInstruments[instIndex].author_email = authorEmail;
-        activeInstruments[instIndex].time = estTime;
+        activeInstruments[instIndex].owner = owner;
 
-        renderActiveLibrary();
-        editModalObj.hide();
-        showToast(`<i class="fas fa-save text-success me-1"></i> "${title}" metadata updated successfully!`);
+        const saveBtn = $("#save-edit-btn");
+        saveBtn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
+
+        module.ajax("save-metadata", { id, title, description: desc, categories: selectedCats, author_name: authorName, author_email: authorEmail, owner }).then(response => {
+            saveBtn.prop("disabled", false).html('<i class="fas fa-save me-2"></i>Save Changes');
+            editModalObj.hide();
+            renderActiveLibrary();
+            if (response && response.status === 'success') {
+                showToast(`<i class="fas fa-save text-success me-1"></i> "${title}" metadata updated successfully!`);
+            } else {
+                showToast(`<i class="fas fa-exclamation-triangle text-danger me-1"></i> ${response ? response.message : 'Error saving metadata.'}`);
+            }
+        }).catch(() => {
+            saveBtn.prop("disabled", false).html('<i class="fas fa-save me-2"></i>Save Changes');
+            editModalObj.hide();
+            showToast('<i class="fas fa-exclamation-triangle text-danger me-1"></i> Error saving metadata.');
+        });
         return;
     }
 
@@ -84,7 +99,7 @@ $("#edit-instrument-form").on("submit", (e) => {
     pendingSubmissions[subIndex].categories = selectedCats;
     pendingSubmissions[subIndex].author_name = authorName;
     pendingSubmissions[subIndex].author_email = authorEmail;
-    pendingSubmissions[subIndex].time = estTime;
+    if (owner) pendingSubmissions[subIndex].owner = owner;
 
     renderPendingSubmissions();
     editModalObj.hide();
@@ -155,15 +170,17 @@ const renderActiveLibrary = () => {
                     <div class="d-flex flex-wrap">${catBadges}</div>
                 </td>
                 <td>
-                    <span class="badge bg-light border text-secondary fw-semibold font-monospace py-1.5 px-2.5" style="font-size:0.82rem;">${escapeHtml(inst.version)}</span>
+                    <span class="font-monospace text-dark fw-semibold" style="font-size:0.88rem;">${escapeHtml(inst.version)}</span>
                 </td>
                 <td>
-                    <div class="fw-semibold text-dark" style="font-size:0.85rem;"><i class="fas fa-list me-1.5 opacity-50"></i>${inst.fields.length} Fields</div>
-                    <div class="text-muted small" style="font-size:0.78rem;"><i class="far fa-clock me-1.5 opacity-50"></i>${escapeHtml(inst.time)}</div>
+                    <span class="fw-semibold text-dark" style="font-size:0.88rem;">${inst.fields.length}</span>
                 </td>
                 <td>
-                    <div class="fw-semibold text-dark">${escapeHtml(inst.author_name)}</div>
+                    <div class="fw-semibold text-dark" style="font-size:0.88rem;">${escapeHtml(inst.author_name)}</div>
                     <div class="text-muted small" style="font-size:0.78rem;">${escapeHtml(inst.author_email)}</div>
+                </td>
+                <td>
+                    <div class="font-monospace text-dark" style="font-size:0.82rem;">${escapeHtml(inst.owner || '—')}</div>
                 </td>
                 <td>
                     <div class="d-flex justify-content-center" style="gap: 8px !important;">
@@ -188,7 +205,7 @@ const renderActiveLibrary = () => {
             pageLength: 10,
             dom: '<"p-3 d-flex justify-content-between align-items-center"l>t<"p-3 d-flex justify-content-between align-items-center"ip>',
             columnDefs: [
-                { orderable: false, targets: 5 }
+                { orderable: false, targets: 6 }
             ],
             language: {
                 emptyTable: "No instruments found",
@@ -243,27 +260,15 @@ const renderPendingSubmissions = () => {
                     <div class="d-flex flex-wrap">${catBadges}</div>
                 </td>
                 <td>
-                    <span class="badge bg-light border text-secondary fw-semibold font-monospace py-1.5 px-2.5" style="font-size:0.82rem;">${escapeHtml(sub.version || 'v1.0.0')}</span>
+                    <span class="font-monospace text-dark fw-semibold" style="font-size:0.88rem;">${escapeHtml(sub.version || 'v1.0.0')}</span>
                 </td>
                 <td>
-                    <div class="fw-semibold text-dark" style="font-size:0.85rem;"><i class="fas fa-list me-1.5 opacity-50"></i>${sub.fields.length} Fields</div>
-                    <div class="text-muted small" style="font-size:0.78rem;"><i class="far fa-clock me-1.5 opacity-50"></i>${escapeHtml(sub.time)}</div>
+                    <span class="fw-semibold text-dark" style="font-size:0.88rem;">${sub.fields.length}</span>
                 </td>
                 <td class="text-center">
-                    <span class="badge bg-warning text-dark fw-bold px-2 py-1" style="font-size:0.68rem; letter-spacing:0.03em;">
-                        <i class="far fa-clock me-1"></i>PENDING
-                    </span>
-                </td>
-                <td>
-                    <div class="d-flex justify-content-center gap-1">
-                        <button class="btn btn-sm btn-outline-success btn-circle-action" onclick="approveSubmission('${sub.id}')" title="Approve Submission">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger btn-circle-action" onclick="rejectSubmission('${sub.id}')" title="Reject Submission">
-                            <i class="fas fa-times"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary btn-circle-action" onclick="openPreview('${sub.id}', 'pending')" title="Review Fields">
-                            <i class="fas fa-search"></i>
+                    <div class="d-flex justify-content-center">
+                        <button class="btn btn-sm btn-outline-primary btn-circle-action" onclick="openReviewModal('${sub.id}')" title="Review Submission">
+                            <i class="fas fa-clipboard-check"></i>
                         </button>
                     </div>
                 </td>
@@ -277,7 +282,7 @@ const renderPendingSubmissions = () => {
             pageLength: 10,
             dom: '<"p-3 d-flex justify-content-between align-items-center"l>t<"p-3 d-flex justify-content-between align-items-center"ip>',
             columnDefs: [
-                { orderable: false, targets: 5 }
+                { orderable: false, targets: 4 }
             ],
             language: {
                 emptyTable: "No pending submissions found",
@@ -315,6 +320,7 @@ const openEditModal = (id, type = 'active') => {
     $("#edit-desc").val(inst.description);
     $("#edit-author-name").val(inst.author_name);
     $("#edit-author-email").val(inst.author_email);
+    $("#edit-owner").val(inst.owner || '');
     $("#edit-time").val(inst.time);
 
     // Uncheck all category boxes first
@@ -375,30 +381,33 @@ const openPreview = (id, type) => {
     const versionsContainer = $("#modal-version-downloads");
     versionsContainer.empty();
 
-    const versionsList = (data.versions && data.versions.length > 0) ? data.versions : [
+    const rawVersionsList = (data.versions && data.versions.length > 0) ? data.versions : [
         { version: String(data.version || '1.0.0').replace(/^v/, ''), submitted_by: data.submitted_by || 'admin', submitted_date: data.submitted_date || 'N/A' }
     ];
 
+    // Sort versions from newest to oldest using semantic version comparison
+    const versionsList = [...rawVersionsList].sort((a, b) => compareSemanticVersions(b.version, a.version));
+
     versionsList.forEach(vObj => {
         const vStr = String(vObj.version).replace(/^v/, '');
-        const isLatest = ('v' + vStr) === data.version;
-        const latestBadge = isLatest ? '<span class="badge bg-success ms-1 font-weight-bold" style="font-size:0.6rem;">Active</span>' : '';
+        const isLatest = ('v' + vStr) === data.version || vStr === String(data.version).replace(/^v/, '');
+        const latestBadge = isLatest ? '<span class="badge bg-success ms-2 font-weight-bold" style="font-size:0.65rem;">Active</span>' : '';
 
         const item = `
-            <div class="border rounded p-2.5 bg-white d-flex align-items-center justify-content-between gap-2 shadow-sm">
+            <div class="border rounded-3 p-3 bg-white d-flex align-items-center justify-content-between gap-3 shadow-sm mb-2">
                 <div>
-                    <div class="fw-bold font-monospace text-dark d-flex align-items-center" style="font-size:0.82rem;">
+                    <div class="fw-bold font-monospace text-dark d-flex align-items-center" style="font-size:0.9rem;">
                         v${vStr} ${latestBadge}
                     </div>
-                    <div class="text-muted small" style="font-size:0.72rem;">
-                        <i class="fas fa-user me-1"></i>${escapeHtml(vObj.submitted_by || 'admin')}
-                        <span class="mx-1">•</span>
-                        <i class="far fa-calendar-alt me-1"></i>${escapeHtml(vObj.submitted_date || 'N/A')}
+                    <div class="text-muted small mt-1" style="font-size:0.78rem;">
+                        <i class="fas fa-user me-1 text-secondary opacity-75"></i>${escapeHtml(vObj.submitted_by || 'admin')}
+                        <span class="mx-1.5 text-muted opacity-50">•</span>
+                        <i class="far fa-calendar-alt me-1 text-secondary opacity-75"></i>${escapeHtml(vObj.submitted_date || 'N/A')}
                     </div>
                 </div>
-                <button class="btn btn-sm btn-outline-primary fw-semibold d-inline-flex align-items-center gap-1 py-1 px-2.5" onclick="downloadMockVersion('${data.id}', '${vStr}')" title="Download v${vStr} ZIP">
+                <button class="btn btn-sm btn-outline-primary fw-semibold d-inline-flex align-items-center gap-1.5 py-1.5 px-3" onclick="downloadMockVersion('${data.id}', '${vStr}')" title="Download v${vStr} ZIP">
                     <i class="fas fa-download"></i>
-                    <span style="font-size:0.75rem;">ZIP</span>
+                    <span style="font-size:0.8rem;">ZIP</span>
                 </button>
             </div>
         `;
@@ -408,82 +417,292 @@ const openPreview = (id, type) => {
     previewModalObj.show();
 };
 
-// Approve Pending Submission
-const approveSubmission = (id) => {
-    const subIndex = pendingSubmissions.findIndex(s => s.id === id);
-    if (subIndex === -1) return;
-    const sub = pendingSubmissions[subIndex];
+// Track current review state
+let currentReviewDecision = 'approve';
+let reviewDeclineReasonText = defaultDeclineEmailBody;
 
-    // Remove from pending
-    pendingSubmissions.splice(subIndex, 1);
+// Open Review Submission Modal (Combined Review & Moderation Screen)
+const openReviewModal = (id) => {
+    const sub = pendingSubmissions.find(s => s.id === id);
+    if (!sub) return;
 
-    // Transform and add to active (simulate approval)
-    const newInst = {
-        id: sub.id,
-        title: sub.title,
-        categories: sub.categories,
-        versions: sub.versions,
-        description: sub.description,
-        installs: 0,
-        time: sub.time,
-        author_name: sub.author_name,
-        author_email: sub.author_email,
-        fields: sub.fields,
-        version: 'v' + sub.versions[0].version,
-        status: 'active',
-        submitted_by: sub.submitted_by,
-        submitted_date: sub.submitted_date
-    };
-    activeInstruments.push(newInst);
+    reviewDeclineReasonText = defaultDeclineEmailBody;
+    $("#review-id").val(sub.id);
+    $("#review-title").text(sub.title);
+    $("#review-version").text(sub.version || 'v1.0.0');
+    $("#review-submitter").text(sub.submitted_by || 'Unknown');
+    $("#review-author").text(`${sub.author_name} (${sub.author_email})`);
+    $("#review-desc").text(sub.description);
+    $("#review-decline-reason").val(defaultDeclineEmailBody);
 
-    // Re-render
-    renderActiveLibrary();
-    renderPendingSubmissions();
+    // Categories
+    let catsHtml = "";
+    sub.categories.forEach(cat => {
+        const map = categoryMapping.find(c => c.name === cat);
+        const cls = map ? map.class : "bg-secondary";
+        catsHtml += `<span class="badge ${cls} me-1 mb-1 px-2.5 py-1 text-uppercase fw-bold" style="font-size: 0.68rem;">${escapeHtml(cat)}</span>`;
+    });
+    $("#review-categories").html(catsHtml);
 
-    showToast(`<i class="fas fa-check-circle text-success me-1"></i> Submission "${sub.title}" approved and added to active library!`);
+    // Field list preview
+    const list = $("#review-field-list");
+    list.empty();
+    sub.fields.forEach((field, index) => {
+        list.append(renderFieldListItem(field, index));
+    });
+
+    // Version Package Download
+    const downloadContainer = $("#review-version-downloads");
+    downloadContainer.empty();
+    const dUrl = (typeof downloadPageUrl !== 'undefined') ? downloadPageUrl : (typeof module !== 'undefined' && module.getUrl ? module.getUrl('download.php') : 'download.php');
+
+    let hasRealFiles = false;
+    if (sub.versions && sub.versions.length) {
+        sub.versions.forEach(vObj => {
+            if (vObj.doc_id && !isNaN(vObj.doc_id)) {
+                hasRealFiles = true;
+                const btn = `
+                    <a href="${dUrl}?doc_id=${encodeURIComponent(vObj.doc_id)}" class="btn btn-sm btn-outline-secondary w-100 fw-semibold d-inline-flex align-items-center justify-content-between py-1.5 px-3">
+                        <span><i class="fas fa-file-archive me-1.5 text-primary"></i>${escapeHtml(vObj.version)}</span>
+                        <i class="fas fa-download text-muted"></i>
+                    </a>
+                `;
+                downloadContainer.append(btn);
+            }
+        });
+    }
+
+    if (!hasRealFiles && sub.doc_id && !isNaN(sub.doc_id)) {
+        hasRealFiles = true;
+        const btn = `
+            <a href="${dUrl}?doc_id=${encodeURIComponent(sub.doc_id)}" class="btn btn-sm btn-outline-secondary w-100 fw-semibold d-inline-flex align-items-center justify-content-between py-1.5 px-3">
+                <span><i class="fas fa-file-archive me-1.5 text-primary"></i>${escapeHtml(sub.version || 'v1.0.0')}</span>
+                <i class="fas fa-download text-muted"></i>
+            </a>
+        `;
+        downloadContainer.append(btn);
+    }
+
+    if (!hasRealFiles) {
+        const btn = `
+            <button type="button" class="btn btn-sm btn-outline-secondary w-100 fw-semibold d-inline-flex align-items-center justify-content-between py-1.5 px-3" onclick="downloadMockVersion('${sub.id}', '${sub.version || 'v1.0.0'}')">
+                <span><i class="fas fa-file-csv me-1.5 text-primary"></i>${escapeHtml(sub.version || 'v1.0.0')} (Demo Package)</span>
+                <i class="fas fa-download text-muted"></i>
+            </button>
+        `;
+        downloadContainer.append(btn);
+    }
+
+    // Default to Step 1 & Approve Decision
+    switchReviewDecisionTab('approve');
+    goToReviewStep(1);
+
+    reviewModalObj.show();
 };
 
-// Reject Pending Submission
-const rejectSubmission = (id) => {
-    const subIndex = pendingSubmissions.findIndex(s => s.id === id);
-    if (subIndex === -1) return;
-    const sub = pendingSubmissions[subIndex];
+const switchReviewDecisionTab = (mode) => {
+    currentReviewDecision = mode;
+    const approveTab = $("#review-tab-approve");
+    const declineTab = $("#review-tab-decline");
+    const declineInputContainer = $("#review-decline-input-container");
 
-    // Remove from pending
-    pendingSubmissions.splice(subIndex, 1);
+    if (mode === 'approve') {
+        approveTab.addClass("active btn-success text-white").removeClass("btn-outline-success text-success");
+        declineTab.removeClass("active btn-danger text-white").addClass("btn-outline-danger");
+        declineInputContainer.addClass("d-none");
+    } else {
+        declineTab.addClass("active btn-danger text-white").removeClass("btn-outline-danger");
+        approveTab.removeClass("active btn-success text-white").addClass("btn-outline-success");
+        declineInputContainer.removeClass("d-none");
+    }
 
-    // Re-render
-    renderPendingSubmissions();
+    // If currently on Step 2, update confirmation view immediately
+    if (!$("#review-step2-right").hasClass("d-none")) {
+        renderStep2Confirmation();
+    }
+};
 
-    showToast(`<i class="fas fa-trash-alt text-danger me-1"></i> Submission "${sub.title}" has been rejected.`);
+const goToReviewStep = (step) => {
+    if (step === 1) {
+        $("#review-step1-right").removeClass("d-none");
+        $("#review-step2-right").addClass("d-none");
+        $("#review-step1-nav").removeClass("d-none");
+        $("#review-step2-nav").addClass("d-none");
+    } else {
+        renderStep2Confirmation();
+        $("#review-step1-right").addClass("d-none");
+        $("#review-step2-right").removeClass("d-none");
+        $("#review-step1-nav").addClass("d-none");
+        $("#review-step2-nav").removeClass("d-none");
+    }
+};
+
+const renderStep2Confirmation = () => {
+    const id = $("#review-id").val();
+    const sub = pendingSubmissions.find(s => s.id === id);
+    if (!sub) return;
+
+    const container = $("#review-finalize-container");
+    container.empty();
+
+    if (currentReviewDecision === 'approve') {
+        container.html(`
+            <div class="card border-success border-opacity-25 bg-success bg-opacity-10 p-4 rounded-3 mb-4 shadow-sm">
+                <div class="d-flex align-items-center gap-3 mb-3 pb-3 border-bottom border-success border-opacity-25">
+                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                        <i class="fas fa-check fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold text-success-emphasis m-0">Publish Instrument</h5>
+                        <p class="text-secondary small m-0">Publish this submission into the active instrument library.</p>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <div class="p-3 bg-white rounded-3 border mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="fw-bold text-dark fs-6">${escapeHtml(sub.title)}</span>
+                            <span class="badge bg-light text-secondary border font-monospace">${escapeHtml(sub.version || 'v1.0.0')}</span>
+                        </div>
+                        <p class="text-muted small mb-0">${escapeHtml(sub.description)}</p>
+                    </div>
+                    <div class="alert alert-success bg-white border-success border-opacity-50 text-success-emphasis rounded-3 p-3 small mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Once approved, <strong>${escapeHtml(sub.title)}</strong> will immediately become available to all users across your institution for installation into REDCap projects. An automated confirmation email will be sent to <strong>${escapeHtml(sub.author_email)}</strong>.
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="button" class="btn btn-success px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm" id="review-finalize-approve-btn">
+                        <i class="fas fa-check"></i>
+                        <span>Publish Instrument</span>
+                    </button>
+                </div>
+            </div>
+        `);
+
+        $("#review-finalize-approve-btn").on("click", () => performReviewApprove());
+    } else {
+        const currentReason = (typeof reviewDeclineReasonText !== 'undefined' && reviewDeclineReasonText) ? reviewDeclineReasonText : defaultDeclineEmailBody;
+        container.html(`
+            <div class="card border-danger border-opacity-25 bg-danger bg-opacity-10 p-4 rounded-3 mb-4 shadow-sm">
+                <div class="d-flex align-items-center gap-3 mb-3 pb-3 border-bottom border-danger border-opacity-25">
+                    <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                        <i class="fas fa-times fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold text-danger-emphasis m-0">Decline Submission</h5>
+                        <p class="text-secondary small m-0">Reject and remove this submission from the pending queue.</p>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <div class="mb-3">
+                        <label for="review-decline-reason" class="form-label small fw-bold text-secondary mb-1" style="font-size:0.72rem; letter-spacing:0.05em;">Feedback Reason for Submitter (Optional)</label>
+                        <textarea class="form-control border-secondary border-opacity-25 p-3 small bg-white text-dark" id="review-decline-reason" rows="4" placeholder="Explain why this submission was declined...">${escapeHtml(currentReason)}</textarea>
+                    </div>
+                    <div class="alert alert-danger bg-white border-danger border-opacity-50 text-danger-emphasis rounded-3 p-3 small mb-0">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Declining this submission will permanently remove it from the pending review queue.
+                    </div>
+                </div>
+                <div class="d-flex align-items-center justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary px-3 py-2 fw-semibold" id="review-finalize-decline-skip-btn">
+                        Decline
+                    </button>
+                    <button type="button" class="btn btn-danger px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm" id="review-finalize-decline-send-btn">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Decline & Send Email</span>
+                    </button>
+                </div>
+            </div>
+        `);
+
+        $("#review-decline-reason").on("input", function () {
+            reviewDeclineReasonText = $(this).val();
+        });
+
+        $("#review-finalize-decline-send-btn").on("click", () => performReviewDecline(true));
+        $("#review-finalize-decline-skip-btn").on("click", () => performReviewDecline(false));
+    }
+};
+
+const performReviewApprove = () => {
+    const id = $("#review-id").val();
+    const btn = $("#review-finalize-approve-btn");
+    btn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin me-2"></i>Publishing...');
+
+    module.ajax("approve-submission", { id: id }).then(response => {
+        btn.prop("disabled", false);
+        reviewModalObj.hide();
+        if (response && response.status === 'success') {
+            showToast('<i class="fas fa-check-circle text-success me-1"></i> Submission approved and published!');
+            setTimeout(() => { location.reload(); }, 1000);
+        } else {
+            showToast(`<i class="fas fa-exclamation-triangle text-danger me-1"></i> ${response ? response.message : 'Error approving submission.'}`);
+        }
+    }).catch(() => {
+        btn.prop("disabled", false);
+        reviewModalObj.hide();
+        showToast('<i class="fas fa-exclamation-triangle text-danger me-1"></i> Error approving submission.');
+    });
+};
+
+const performReviewDecline = (sendEmail) => {
+    const id = $("#review-id").val();
+    const reason = $("#review-decline-reason").val();
+    const btn = sendEmail ? $("#review-finalize-decline-send-btn") : $("#review-finalize-decline-skip-btn");
+
+    btn.prop("disabled", true);
+
+    module.ajax("decline-submission", { id: id, send_email: sendEmail, reason: reason }).then(response => {
+        btn.prop("disabled", false);
+        reviewModalObj.hide();
+        if (response && response.status === 'success') {
+            showToast('<i class="fas fa-trash-alt text-danger me-1"></i> Submission declined and removed.');
+            setTimeout(() => { location.reload(); }, 1000);
+        } else {
+            showToast(`<i class="fas fa-exclamation-triangle text-danger me-1"></i> ${response ? response.message : 'Error declining submission.'}`);
+        }
+    }).catch(() => {
+        btn.prop("disabled", false);
+        reviewModalObj.hide();
+        showToast('<i class="fas fa-exclamation-triangle text-danger me-1"></i> Error declining submission.');
+    });
 };
 
 // Trigger mock ZIP package downloads for specific versions
 const downloadMockVersion = (instId, versionStr) => {
-    const inst = activeInstruments.find(i => i.id === instId);
-    if (inst)
-        downloadMockFile(instId, versionStr, inst.title);
+    const inst = activeInstruments.find(i => i.id === instId) || pendingSubmissions.find(s => s.id === instId);
+    if (inst) {
+        downloadMockFile(inst.id, versionStr || inst.version || '1.0.0', inst.title);
+    }
 };
 
-// Helper to generate and download mock ZIP binary
+// Helper to generate and download mock instrument CSV package
 const downloadMockFile = (id, version, title) => {
-    const mockZipContent = "PK\x03\x04\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0e\x00\t\x00metadata.json" + JSON.stringify({
-        id,
-        version,
-        title
-    }, null, 2);
-    const blob = new Blob([mockZipContent], {
-        type: "application/zip"
-    });
+    const item = pendingSubmissions.find(s => s.id === id) || activeInstruments.find(i => i.id === id);
+    const fields = item ? item.fields : [];
+
+    let csvContent = "Variable / Field Name,Form Name,Section Header,Field Type,Field Label,Choices, Field Notes,Text Validation Type OR Show Slider Number,Text Validation Min,Text Validation Max,Identifier?,Branching Logic,Required Field?,Custom Alignment,Question Number,Matrix Group Name,Matrix Ranking?,Field Annotation\n";
+    if (fields && fields.length) {
+        fields.forEach(f => {
+            const vName = (f.variable || 'field').replace(/"/g, '""');
+            const fType = (f.type || 'text').replace(/"/g, '""');
+            const fLabel = (f.label || 'Field Label').replace(/"/g, '""');
+            csvContent += `"${vName}","instrument","","${fType}","${fLabel}","","","","","","","","","","","","",""\n`;
+        });
+    } else {
+        csvContent += `"demo_variable","instrument","","text","Demo Question Label","","","","","","","","","","","","",""\n`;
+    }
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${id}_v${version}_instrument.zip`;
+    a.download = `${id}_v${version}_instrument.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast(`<i class="fas fa-file-archive text-primary me-1"></i> Downloaded ZIP package for "${title}" (v${version})`);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast(`<i class="fas fa-file-csv text-primary me-1"></i> Downloaded instrument package for "${title || id}" (${version})`);
 };
 
 // Utility: Toast displayer
@@ -496,16 +715,162 @@ const showToast = (htmlMessage) => {
     }, 4000);
 };
 
-// Helper: HTML escape helper (now imported from utils.js)
+// Settings Tab: Render Categories List
+const renderSettingsCategories = () => {
+    const listContainer = $("#settings-categories-list");
+    listContainer.empty();
+    if (!configuredCategories || configuredCategories.length === 0) {
+        listContainer.html('<span class="text-muted small">No categories configured.</span>');
+        return;
+    }
+    configuredCategories.forEach((cat) => {
+        const item = `
+            <span class="badge bg-white border text-dark p-2 d-inline-flex align-items-center gap-1.5 shadow-sm" style="font-size:0.82rem;">
+                ${escapeHtml(cat)}
+                <i class="fas fa-times text-muted cursor-pointer ms-1 hover-danger" onclick="removeSettingCategory('${escapeHtml(cat)}')" title="Remove Category"></i>
+            </span>
+        `;
+        listContainer.append(item);
+    });
+};
+
+// Settings Tab: Add Category
+$("#add-category-btn").on("click", () => {
+    const input = $("#new-category-input");
+    const val = input.val().trim();
+    if (!val) return;
+    if (configuredCategories.some(c => c.toLowerCase() === val.toLowerCase())) {
+        showToast(`<i class="fas fa-exclamation-circle text-warning me-1"></i> Category "${escapeHtml(val)}" already exists.`);
+        return;
+    }
+    configuredCategories.push(val);
+    input.val("");
+    renderSettingsCategories();
+});
+
+$("#new-category-input").on("keypress", (e) => {
+    if (e.which === 13) {
+        e.preventDefault();
+        $("#add-category-btn").click();
+    }
+});
+
+// Settings Tab: Remove Category
+const removeSettingCategory = (catName) => {
+    configuredCategories = configuredCategories.filter(c => c !== catName);
+    renderSettingsCategories();
+};
+window.removeSettingCategory = removeSettingCategory;
+
+// Settings Tab: Render Alert Emails List
+const renderSettingsAlertEmails = () => {
+    const listContainer = $("#settings-emails-list");
+    listContainer.empty();
+    if (!configuredAlertEmails || configuredAlertEmails.length === 0) {
+        listContainer.html('<span class="text-muted small">No alert emails configured. Notifications are currently disabled.</span>');
+        return;
+    }
+    configuredAlertEmails.forEach((email) => {
+        const item = `
+            <span class="badge bg-white border text-dark p-2 d-inline-flex align-items-center gap-1.5 shadow-sm" style="font-size:0.82rem;">
+                <i class="fas fa-envelope text-secondary me-1" style="font-size:0.75rem;"></i>${escapeHtml(email)}
+                <i class="fas fa-times text-muted cursor-pointer ms-1 hover-danger" onclick="removeSettingAlertEmail('${escapeHtml(email)}')" title="Remove Email"></i>
+            </span>
+        `;
+        listContainer.append(item);
+    });
+};
+
+// Settings Tab: Add Alert Email
+$("#add-alert-email-btn").on("click", () => {
+    const input = $("#new-alert-email-input");
+    const val = input.val().trim();
+    if (!val) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(val)) {
+        showToast(`<i class="fas fa-exclamation-circle text-warning me-1"></i> Please enter a valid email address.`);
+        return;
+    }
+    if (configuredAlertEmails.some(e => e.toLowerCase() === val.toLowerCase())) {
+        showToast(`<i class="fas fa-exclamation-circle text-warning me-1"></i> Email "${escapeHtml(val)}" is already in the alert list.`);
+        return;
+    }
+    configuredAlertEmails.push(val);
+    input.val("");
+    renderSettingsAlertEmails();
+});
+
+$("#new-alert-email-input").on("keypress", (e) => {
+    if (e.which === 13) {
+        e.preventDefault();
+        $("#add-alert-email-btn").click();
+    }
+});
+
+// Settings Tab: Remove Alert Email
+const removeSettingAlertEmail = (emailStr) => {
+    configuredAlertEmails = configuredAlertEmails.filter(e => e !== emailStr);
+    renderSettingsAlertEmails();
+};
+window.removeSettingAlertEmail = removeSettingAlertEmail;
+
+// Settings Form Submission
+$("#settings-form").on("submit", function (e) {
+    e.preventDefault();
+    const btn = $("#save-settings-btn");
+    btn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin me-2"></i>Saving Settings...');
+
+    const payload = {
+        show_demo_instruments: $("#setting-show-demo").is(":checked"),
+        enable_public_page: $("#setting-enable-public").is(":checked"),
+        public_library_title: $("#setting-public-title").val().trim(),
+        public_library_blurb: $("#setting-public-blurb").val().trim(),
+        internal_library_title: $("#setting-internal-title").val().trim(),
+        internal_library_blurb: $("#setting-internal-blurb").val().trim(),
+        categories: configuredCategories,
+        submission_alert_emails: configuredAlertEmails,
+        default_decline_email_body: $("#setting-decline-email-body").val().trim(),
+        allow_owner_direct_update: $("#setting-allow-owner-bypass").is(":checked")
+    };
+
+    module.ajax("save-settings", payload).then((response) => {
+        btn.prop("disabled", false).html('<i class="fas fa-save me-2"></i>Save Module Settings');
+        if (response && response.status === 'success') {
+            showToast('<i class="fas fa-check-circle text-success me-1"></i> Module settings saved successfully!');
+            setTimeout(() => { location.reload(); }, 1000);
+        } else {
+            showToast('<i class="fas fa-exclamation-triangle text-danger me-1"></i> ' + (response ? response.message : 'Failed to save settings.'));
+        }
+    }).catch(() => {
+        btn.prop("disabled", false).html('<i class="fas fa-save me-2"></i>Save Module Settings');
+        showToast('<i class="fas fa-exclamation-triangle text-danger me-1"></i> Error saving module settings.');
+    });
+});
+
+// Tab State Manager (Disable search bar on Settings tab)
+$('button[data-bs-toggle="tab"]').on('shown.bs.tab', (e) => {
+    const targetId = $(e.target).attr('id');
+    if (targetId === 'settings-tab') {
+        $("#admin-search").prop("disabled", true);
+        $("#admin-search-wrapper").addClass("disabled-wrapper");
+    } else {
+        $("#admin-search").prop("disabled", false);
+        $("#admin-search-wrapper").removeClass("disabled-wrapper");
+    }
+});
+
 // Expose necessary functions globally for HTML string onclick event handlers
 window.downloadMockVersion = downloadMockVersion;
 window.openEditModal = openEditModal;
 window.toggleHideInstrument = toggleHideInstrument;
 window.openPreview = openPreview;
-window.rejectSubmission = rejectSubmission;
-window.approveSubmission = approveSubmission;
+window.openReviewModal = openReviewModal;
+window.switchReviewDecisionTab = switchReviewDecisionTab;
+window.goToReviewStep = goToReviewStep;
 
-// Initial render call and badge updates
+// Initial render calls and badge updates
 $("#active-count").text(activeInstruments.length);
 $("#pending-badge").text(pendingSubmissions.length);
+renderSettingsCategories();
+renderSettingsAlertEmails();
 triggerCurrentFilter();

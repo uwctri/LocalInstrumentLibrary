@@ -18,20 +18,14 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             $this->setSystemSetting("storage_project", $project_id);
         }
 
-        if (empty($this->getSystemSetting("public_library_title")))
-            $this->setSystemSetting("public_library_title", "Local Instrument Library");
+        $defaults = $this->getDefaults();
+        $init_settings = $defaults['default_settings'] ?? [];
 
-        if (empty($this->getSystemSetting("public_library_blurb")))
-            $this->setSystemSetting("public_library_blurb", "Browse pre-approved data collection instruments. Select from validated clinical scales, standard demographics questionnaires, and specialized screeners.");
-
-        if (empty($this->getSystemSetting("internal_library_title")))
-            $this->setSystemSetting("internal_library_title", "Local Instrument Library");
-
-        if (empty($this->getSystemSetting("internal_library_blurb")))
-            $this->setSystemSetting("internal_library_blurb", "Browse and install pre-approved data collection instruments directly into your current REDCap project. Select from validated clinical scales, standard demographics questionnaires, and specialized screeners.");
-
-        if ($this->getSystemSetting("show_demo_instruments") === null)
-            $this->setSystemSetting("show_demo_instruments", true);
+        foreach ($init_settings as $key => $default_value) {
+            $val = $this->getSystemSetting($key);
+            if ($val === null || $val === "")
+                $this->setSystemSetting($key, $default_value);
+        }
     }
 
     public function redcap_every_page_top($project_id)
@@ -82,7 +76,91 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         if ($action === 'uninstall')
             return $this->handleUninstallAction($payload, $project_id);
 
+        if ($action === 'save-settings')
+            return $this->handleSaveSettingsAction($payload);
+
+        if ($action === 'approve-submission')
+            return $this->handleApproveSubmissionAction($payload);
+
+        if ($action === 'decline-submission')
+            return $this->handleDeclineSubmissionAction($payload);
+
+        if ($action === 'save-metadata')
+            return $this->handleSaveMetadataAction($payload);
+
         return ['status' => 'error', 'message' => 'Invalid action.'];
+    }
+
+    private function handleSaveSettingsAction($payload)
+    {
+        if (!SUPER_USER)
+            return ['status' => 'error', 'message' => 'Only REDCap Administrators can modify system settings.'];
+
+        if (isset($payload['show_demo_instruments']))
+            $this->setSystemSetting('show_demo_instruments', (bool)$payload['show_demo_instruments']);
+
+        if (isset($payload['enable_public_page']))
+            $this->setSystemSetting('enable_public_page', (bool)$payload['enable_public_page']);
+
+        if (isset($payload['public_library_title']))
+            $this->setSystemSetting('public_library_title', trim((string)$payload['public_library_title']));
+
+        if (isset($payload['public_library_blurb']))
+            $this->setSystemSetting('public_library_blurb', trim((string)$payload['public_library_blurb']));
+
+        if (isset($payload['internal_library_title']))
+            $this->setSystemSetting('internal_library_title', trim((string)$payload['internal_library_title']));
+
+        if (isset($payload['internal_library_blurb']))
+            $this->setSystemSetting('internal_library_blurb', trim((string)$payload['internal_library_blurb']));
+
+        if (isset($payload['categories']) && is_array($payload['categories'])) {
+            $cleanCats = array_values(array_filter(array_map('trim', $payload['categories'])));
+            $this->setSystemSetting('categories', $cleanCats);
+        }
+
+        if (isset($payload['submission_alert_emails']) && is_array($payload['submission_alert_emails'])) {
+            $cleanEmails = array_values(array_filter(array_map('trim', $payload['submission_alert_emails'])));
+            $this->setSystemSetting('submission_alert_emails', $cleanEmails);
+        }
+
+        if (isset($payload['default_decline_email_body'])) {
+            $this->setSystemSetting('default_decline_email_body', trim((string)$payload['default_decline_email_body']));
+        }
+
+        if (isset($payload['allow_owner_direct_update']))
+            $this->setSystemSetting('allow_owner_direct_update', (bool)$payload['allow_owner_direct_update']);
+
+        return ['status' => 'success', 'message' => 'System settings saved successfully.'];
+    }
+
+    private function handleSaveMetadataAction($payload)
+    {
+        $id = $payload['id'] ?? '';
+        if (empty($id))
+            return ['status' => 'error', 'message' => 'Instrument ID is required.'];
+
+        $uploaded = $this->loadUploadedInstruments();
+        $found = false;
+        foreach ($uploaded as $uIdx => $uInst) {
+            if ($uInst['id'] !== $id)
+                continue;
+            if (isset($payload['title']))       $uploaded[$uIdx]['title']       = trim((string)$payload['title']);
+            if (isset($payload['description'])) $uploaded[$uIdx]['description'] = trim((string)$payload['description']);
+            if (isset($payload['author_name'])) $uploaded[$uIdx]['author_name'] = trim((string)$payload['author_name']);
+            if (isset($payload['author_email']))$uploaded[$uIdx]['author_email']= trim((string)$payload['author_email']);
+            if (isset($payload['owner']))       $uploaded[$uIdx]['owner']       = trim((string)$payload['owner']);
+            if (isset($payload['categories']) && is_array($payload['categories']))
+                $uploaded[$uIdx]['categories'] = array_values(array_filter(array_map('trim', $payload['categories'])));
+            $found = true;
+            break;
+        }
+
+        if (!$found)
+            return ['status' => 'error', 'message' => 'Instrument not found in active library.'];
+
+        $this->saveUploadedInstruments($uploaded);
+        return ['status' => 'success', 'message' => 'Instrument metadata saved successfully.'];
     }
 
     private function handleZipSubmission($payload)
@@ -286,8 +364,8 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         $author_name = $payload['author_name'] ?? '';
         $author_email = $payload['author_email'] ?? '';
         $version = $payload['version'] ?? '1.0.0';
-        $time = $payload['time'] ?? '';
         $categories = $payload['categories'] ?? [];
+        $submitter = ExternalModules::getUsername();
 
         if ($subType === 'new' && empty($title))
             return ['status' => 'error', 'message' => 'Instrument title is required.'];
@@ -305,88 +383,147 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         $fields = $result['fields'];
         $doc_id = $result['doc_id'];
 
-        $uploaded_instruments = $this->loadUploadedInstruments();
+        $pending_submissions = $this->loadPendingSubmissions();
 
         if ($subType === 'update') {
-            $target_inst = null;
-            $is_existing_uploaded = false;
             $existingId = $payload['existingId'] ?? '';
-            foreach ($uploaded_instruments as $idx => $inst) {
+            $target_inst = null;
+            foreach ($this->getInstruments() as $inst) {
                 if ($inst['id'] === $existingId) {
-                    $target_inst = &$uploaded_instruments[$idx];
-                    $is_existing_uploaded = true;
+                    $target_inst = $inst;
                     break;
                 }
             }
 
-            if (!$target_inst) {
-                $instruments = $this->getInstruments();
-                foreach ($instruments as $inst) {
-                    if ($inst['id'] === $existingId) {
-                        $target_inst = $inst;
-                        break;
+            $update_sub = [
+                'id'              => $existingId ?: ('upd_' . time()),
+                'title'           => !empty($title) ? $title : ($target_inst['title'] ?? 'Updated Instrument'),
+                'categories'      => !empty($categories) ? $categories : ($target_inst['categories'] ?? []),
+                'description'     => !empty($description) ? $description : ($target_inst['description'] ?? ''),
+                'author_name'     => !empty($author_name) ? $author_name : ($target_inst['author_name'] ?? ''),
+                'author_email'    => !empty($author_email) ? $author_email : ($target_inst['author_email'] ?? ''),
+                'submitted_by'    => $submitter,
+                'submitted_date'  => date('Y-m-d'),
+                'submission_date' => date('Y-m-d'),
+                'owner'           => $target_inst['owner'] ?? $submitter,
+                'installs'        => 0,
+                'fields'          => $fields,
+                'versions'        => [
+                    [
+                        'version'        => $version,
+                        'doc_id'         => $doc_id,
+                        'submitted_by'   => $submitter,
+                        'submitted_date' => date('Y-m-d')
+                    ]
+                ]
+            ];
+
+            // Owner bypass: if enabled and submitter is the instrument owner, publish directly
+            $ownerBypassEnabled = (bool)$this->getSystemSetting('allow_owner_direct_update');
+            if ($ownerBypassEnabled && ($target_inst['owner'] ?? '') === $submitter && $target_inst !== null) {
+                $uploaded = $this->loadUploadedInstruments();
+                foreach ($uploaded as $uIdx => $uInst) {
+                    if ($uInst['id'] !== $existingId)
+                        continue;
+                    $uploaded[$uIdx]['title']       = $update_sub['title'];
+                    $uploaded[$uIdx]['categories']  = $update_sub['categories'];
+                    $uploaded[$uIdx]['description'] = $update_sub['description'];
+                    $uploaded[$uIdx]['author_name'] = $update_sub['author_name'];
+                    $uploaded[$uIdx]['author_email']= $update_sub['author_email'];
+                    $uploaded[$uIdx]['fields']      = $update_sub['fields'];
+                    $existing_versions = $uploaded[$uIdx]['versions'] ?? [];
+                    $vExists = false;
+                    foreach ($existing_versions as $eV) {
+                        if ($eV['version'] === $version) $vExists = true;
                     }
+                    if (!$vExists)
+                        $existing_versions[] = $update_sub['versions'][0];
+                    $uploaded[$uIdx]['versions'] = $existing_versions;
+                    break;
                 }
+                $this->saveUploadedInstruments($uploaded);
+                $this->sendSubmissionAlertEmail($update_sub['title'], $author_name, $author_email, $submitter, $version);
+                return ['status' => 'success', 'message' => 'Update published directly to active library (owner bypass).', 'bypass' => true];
             }
 
-            if (!$target_inst)
-                return ['status' => 'error', 'message' => 'Target instrument not found for update.'];
-
-            $target_inst['title'] = !empty($title) ? $title : $target_inst['title'];
-            $target_inst['categories'] = !empty($categories) ? $categories : $target_inst['categories'];
-            $target_inst['description'] = !empty($description) ? $description : $target_inst['description'];
-            $target_inst['author_name'] = !empty($author_name) ? $author_name : $target_inst['author_name'];
-            $target_inst['author_email'] = !empty($author_email) ? $author_email : $target_inst['author_email'];
-            $target_inst['time'] = !empty($time) ? $time : $target_inst['time'];
-            $target_inst['fields'] = $fields;
-
-            $new_version_obj = [
-                'version' => $version,
-                'doc_id' => $doc_id,
-                'submitted_by' => ExternalModules::getUsername(),
-                'submitted_date' => date('Y-m-d')
-            ];
-            $target_inst['versions'][] = $new_version_obj;
-
-            if (!$is_existing_uploaded)
-                $uploaded_instruments[] = $target_inst;
+            $pending_submissions[] = $update_sub;
         } else {
             $clean_id = strtolower(preg_replace('/[^a-zA-Z0-9]/', '_', $title));
             $clean_id = preg_replace('/_+/', '_', $clean_id);
             $clean_id = trim($clean_id, '_');
 
-            $instruments = $this->getInstruments();
+            $all_existing = array_merge($this->getInstruments(), $pending_submissions);
             $id_exists = false;
-            foreach ($instruments as $inst) {
+            foreach ($all_existing as $inst) {
                 if ($inst['id'] === $clean_id) $id_exists = true;
             }
             if ($id_exists)
                 $clean_id .= '_' . time();
 
             $new_inst = [
-                'id' => $clean_id,
-                'title' => $title,
-                'categories' => $categories,
-                'description' => $description,
-                'author_name' => $author_name,
-                'author_email' => $author_email,
-                'time' => $time,
-                'installs' => 0,
-                'fields' => $fields,
-                'versions' => [
+                'id'              => $clean_id,
+                'title'           => $title,
+                'categories'      => $categories,
+                'description'     => $description,
+                'author_name'     => $author_name,
+                'author_email'    => $author_email,
+                'submitted_by'    => $submitter,
+                'submitted_date'  => date('Y-m-d'),
+                'submission_date' => date('Y-m-d'),
+                'owner'           => $submitter,
+                'installs'        => 0,
+                'fields'          => $fields,
+                'versions'        => [
                     [
-                        'version' => $version,
-                        'doc_id' => $doc_id,
-                        'submitted_by' => ExternalModules::getUsername(),
+                        'version'        => $version,
+                        'doc_id'         => $doc_id,
+                        'submitted_by'   => $submitter,
                         'submitted_date' => date('Y-m-d')
                     ]
                 ]
             ];
-            $uploaded_instruments[] = $new_inst;
+            $pending_submissions[] = $new_inst;
         }
 
-        $this->saveUploadedInstruments($uploaded_instruments);
-        return ['status' => 'success', 'message' => 'Instrument successfully submitted.'];
+        $this->savePendingSubmissions($pending_submissions);
+        $this->sendSubmissionAlertEmail($title, $author_name, $author_email, ExternalModules::getUsername(), $version);
+        return ['status' => 'success', 'message' => 'Instrument successfully submitted for administrator moderation.'];
+    }
+
+    private function sendSubmissionAlertEmail($title, $author_name, $author_email, $submitter, $version)
+    {
+        $emails = $this->getSystemSetting('submission_alert_emails');
+        if (empty($emails) || !is_array($emails))
+            return;
+
+        $admin_url = $this->getUrl('admin.php');
+        if (preg_match('#/redcap_v\d+\.\d+\.\d+/#i', $admin_url)) {
+            $admin_url = preg_replace('#/redcap_v\d+\.\d+\.\d+/ExternalModules/\?#i', '/api/?type=module&', $admin_url);
+            $admin_url = preg_replace('#/redcap_v\d+\.\d+\.\d+/#i', '/', $admin_url);
+        }
+
+        $subject = "[Local Instrument Library] New Instrument Submission: " . $title;
+        $body = "Hello,\n\n";
+        $body .= "A new data collection instrument has been submitted to the Local Instrument Library for review:\n\n";
+        $body .= "Title: " . $title . "\n";
+        $body .= "Version: " . $version . "\n";
+        $body .= "Author: " . $author_name . " (" . $author_email . ")\n";
+        $body .= "Submitted By: " . $submitter . "\n";
+        $body .= "Date: " . date('Y-m-d H:i:s') . "\n\n";
+        $body .= "Please log into REDCap to review and moderate this submission:\n";
+        $body .= $admin_url . "\n\n";
+        $body .= "Local Instrument Library Module";
+
+        foreach ($emails as $to) {
+            $to = trim($to);
+            if (!empty($to) && filter_var($to, FILTER_VALIDATE_EMAIL)) {
+                if (method_exists($this, 'sendEmail')) {
+                    $this->sendEmail($to, 'noreply@redcap.edu', $subject, $body);
+                } elseif (class_exists('REDCap') && method_exists('REDCap', 'email')) {
+                    \REDCap::email($to, 'noreply@redcap.edu', $subject, $body);
+                }
+            }
+        }
     }
 
     private function handleInstallAction($payload, $project_id)
@@ -585,6 +722,254 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         return ['status' => 'success', 'message' => 'Removed instrument'];
     }
 
+    public function loadPendingSubmissions()
+    {
+        $json = $this->getSystemSetting("pending_submissions_metadata");
+        if (empty($json))
+            return [];
+
+        $data = json_decode($json, true);
+        return is_array($data) ? $data : [];
+    }
+
+    public function savePendingSubmissions($pending)
+    {
+        $json = json_encode(array_values($pending));
+        $this->setSystemSetting("pending_submissions_metadata", $json);
+    }
+
+    public function getPendingSubmissions($includeDemos = null)
+    {
+        if ($includeDemos === null)
+            $includeDemos = (bool)$this->getSystemSetting('show_demo_instruments');
+
+        $real_pending = $this->loadPendingSubmissions();
+
+        $demo_pending = [];
+        if ($includeDemos) {
+            $defaults = $this->getDefaults();
+            $domain = $this->getContactEmailDomain();
+            foreach ($defaults['demo_pending_submissions'] ?? [] as $sub) {
+                if (!empty($sub['author_email']))
+                    $sub['author_email'] = preg_replace('/@(.*)$/', '@' . $domain, $sub['author_email']);
+                $sub['is_demo'] = true;
+                $demo_pending[] = $sub;
+            }
+        }
+
+        $combined = array_merge($real_pending, $demo_pending);
+
+        foreach ($combined as &$sub) {
+            $latest = "0.0.0";
+            if (isset($sub['versions']) && is_array($sub['versions'])) {
+                foreach ($sub['versions'] as $vObj) {
+                    $v = $vObj['version'];
+                    $vClean = ltrim($v, 'v');
+                    if (version_compare($vClean, $latest, '>'))
+                        $latest = $vClean;
+                }
+            }
+            $sub['version'] = 'v' . $latest;
+            $sub['status'] = 'pending';
+        }
+        unset($sub);
+
+        return $combined;
+    }
+
+    private function handleApproveSubmissionAction($payload)
+    {
+        if (!SUPER_USER)
+            return ['status' => 'error', 'message' => 'Only REDCap Administrators can approve submissions.'];
+
+        $id = $payload['id'] ?? '';
+        if (empty($id))
+            return ['status' => 'error', 'message' => 'Submission ID is required.'];
+
+        $pending = $this->loadPendingSubmissions();
+        $target_index = -1;
+        $target_sub = null;
+
+        foreach ($pending as $idx => $sub) {
+            if ($sub['id'] === $id) {
+                $target_index = $idx;
+                $target_sub = $sub;
+                break;
+            }
+        }
+
+        if (!$target_sub && (bool)$this->getSystemSetting('show_demo_instruments')) {
+            $defaults = $this->getDefaults();
+            foreach ($defaults['demo_pending_submissions'] ?? [] as $sub) {
+                if ($sub['id'] === $id) {
+                    $target_sub = $sub;
+                    break;
+                }
+            }
+        }
+
+        if (!$target_sub)
+            return ['status' => 'error', 'message' => 'Submission not found.'];
+
+        if ($target_index === -1 || !empty($target_sub['is_demo'])) {
+            $this->sendApprovalEmailToSubmitter($target_sub);
+            return ['status' => 'success', 'message' => 'Demo submission approved (demo instruments are for preview only and are not saved to active storage).'];
+        }
+
+        $uploaded = $this->loadUploadedInstruments();
+        $existing_index = -1;
+        foreach ($uploaded as $uIdx => $uInst) {
+            if ($uInst['id'] === $target_sub['id']) {
+                $existing_index = $uIdx;
+                break;
+            }
+        }
+
+        if ($existing_index >= 0) {
+            $uploaded[$existing_index]['title'] = $target_sub['title'];
+            $uploaded[$existing_index]['categories'] = $target_sub['categories'];
+            $uploaded[$existing_index]['description'] = $target_sub['description'];
+            $uploaded[$existing_index]['author_name'] = $target_sub['author_name'];
+            $uploaded[$existing_index]['author_email'] = $target_sub['author_email'];
+            $uploaded[$existing_index]['fields'] = $target_sub['fields'];
+
+            $existing_versions = $uploaded[$existing_index]['versions'] ?? [];
+            foreach ($target_sub['versions'] as $newV) {
+                $vExists = false;
+                foreach ($existing_versions as $eV) {
+                    if ($eV['version'] === $newV['version']) $vExists = true;
+                }
+                if (!$vExists) $existing_versions[] = $newV;
+            }
+            $uploaded[$existing_index]['versions'] = $existing_versions;
+        } else {
+            $uploaded[] = $target_sub;
+        }
+
+        $this->saveUploadedInstruments($uploaded);
+
+        if ($target_index >= 0) {
+            array_splice($pending, $target_index, 1);
+            $this->savePendingSubmissions($pending);
+        }
+
+        $this->sendApprovalEmailToSubmitter($target_sub);
+
+        return ['status' => 'success', 'message' => 'Submission approved and published to active library.'];
+    }
+
+    private function handleDeclineSubmissionAction($payload)
+    {
+        if (!SUPER_USER)
+            return ['status' => 'error', 'message' => 'Only REDCap Administrators can decline submissions.'];
+
+        $id = $payload['id'] ?? '';
+        $send_email = !empty($payload['send_email']);
+        $reason = trim($payload['reason'] ?? '');
+
+        if (empty($id))
+            return ['status' => 'error', 'message' => 'Submission ID is required.'];
+
+        $pending = $this->loadPendingSubmissions();
+        $target_index = -1;
+        $target_sub = null;
+
+        foreach ($pending as $idx => $sub) {
+            if ($sub['id'] === $id) {
+                $target_index = $idx;
+                $target_sub = $sub;
+                break;
+            }
+        }
+
+        if (!$target_sub && (bool)$this->getSystemSetting('show_demo_instruments')) {
+            $defaults = $this->getDefaults();
+            foreach ($defaults['demo_pending_submissions'] ?? [] as $sub) {
+                if ($sub['id'] === $id) {
+                    $target_sub = $sub;
+                    break;
+                }
+            }
+        }
+
+        if (!$target_sub)
+            return ['status' => 'error', 'message' => 'Submission not found.'];
+
+        if ($target_index === -1 || !empty($target_sub['is_demo'])) {
+            if ($send_email) {
+                $this->sendDeclineEmailToSubmitter($target_sub, $reason);
+            }
+            return ['status' => 'success', 'message' => 'Demo submission declined (demo instruments are for preview only).'];
+        }
+
+        if (isset($target_sub['versions']) && is_array($target_sub['versions'])) {
+            foreach ($target_sub['versions'] as $vObj) {
+                if (!empty($vObj['doc_id']) && is_numeric($vObj['doc_id'])) {
+                    if (class_exists('Files') && method_exists('Files', 'deleteFile')) {
+                        Files::deleteFile($vObj['doc_id']);
+                    }
+                }
+            }
+        }
+
+        if ($target_index >= 0) {
+            array_splice($pending, $target_index, 1);
+            $this->savePendingSubmissions($pending);
+        }
+
+        if ($send_email) {
+            $this->sendDeclineEmailToSubmitter($target_sub, $reason);
+        }
+
+        return ['status' => 'success', 'message' => 'Submission declined and removed.'];
+    }
+
+    private function sendApprovalEmailToSubmitter($sub)
+    {
+        $to = $sub['author_email'] ?? '';
+        if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL))
+            return;
+
+        $subject = "[Local Instrument Library] Submission Approved: " . $sub['title'];
+        $body = "Hello " . ($sub['author_name'] ?: 'Submitter') . ",\n\n";
+        $body .= "Great news! Your submitted data collection instrument, \"" . $sub['title'] . "\", has been approved by the REDCap Administrator.\n\n";
+        $body .= "It is now live in the Local Instrument Library and available for REDCap users across your institution to browse and install into their projects.\n\n";
+        $body .= "Thank you for contributing to our organization's data collection standards!\n\n";
+        $body .= "Local Instrument Library Module";
+
+        if (method_exists($this, 'sendEmail')) {
+            $this->sendEmail($to, 'noreply@redcap.edu', $subject, $body);
+        } elseif (class_exists('REDCap') && method_exists('REDCap', 'email')) {
+            \REDCap::email($to, 'noreply@redcap.edu', $subject, $body);
+        }
+    }
+
+    private function sendDeclineEmailToSubmitter($sub, $reason)
+    {
+        $to = $sub['author_email'] ?? '';
+        if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL))
+            return;
+
+        if (empty($reason)) {
+            $reason = (string)$this->getSystemSetting('default_decline_email_body');
+        }
+
+        $subject = "[Local Instrument Library] Submission Update: " . $sub['title'];
+        $body = "Hello " . ($sub['author_name'] ?: 'Submitter') . ",\n\n";
+        $body .= "Thank you for submitting your data collection instrument, \"" . $sub['title'] . "\", to the Local Instrument Library.\n\n";
+        $body .= "After review, the REDCap Administrator has declined this submission.\n\n";
+        $body .= "Feedback / Reason provided by Administrator:\n";
+        $body .= $reason . "\n\n";
+        $body .= "If you have questions or would like to make revisions, please reach out to your REDCap Administrator.\n\n";
+        $body .= "Local Instrument Library Module";
+
+        if (method_exists($this, 'sendEmail')) {
+            $this->sendEmail($to, 'noreply@redcap.edu', $subject, $body);
+        } elseif (class_exists('REDCap') && method_exists('REDCap', 'email')) {
+            \REDCap::email($to, 'noreply@redcap.edu', $subject, $body);
+        }
+    }
+
     public function getInstruments($includeDemos = null)
     {
         // Default to the system setting when not explicitly specified
@@ -600,6 +985,7 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             foreach ($defaults['demo_instruments'] ?? [] as $inst) {
                 if (!empty($inst['author_email']))
                     $inst['author_email'] = preg_replace('/@(.*)$/', '@' . $domain, $inst['author_email']);
+                $inst['is_demo'] = true;
                 $combined[$inst['id']] = $inst;
             }
         }
@@ -650,7 +1036,11 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         $sql = $this->query("SELECT value FROM redcap_config WHERE field_name = 'homepage_contact_email'", []);
         $email = db_fetch_assoc($sql)['value'] ?? '';
         $parts = explode('@', $email);
-        return count($parts) === 2 ? $this->escape($parts[1]) : 'example.edu';
+        if (count($parts) === 2) {
+            return $this->escape($parts[1]);
+        }
+        $defaults = $this->getDefaults();
+        return $this->escape($defaults['default_settings']['default_contact_email_domain'] ?? 'example.edu');
     }
 
     public function loadUploadedInstruments()
@@ -741,9 +1131,14 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         }
 
         $nice_colors = $defaults['category_colors'] ?? [];
+        if (empty($nice_colors)) {
+            throw new \Exception("Category color definitions missing in defaults.json.");
+        }
+
         $categories_list = [];
+        $color_count = count($nice_colors);
         foreach ($raw as $index => $cat) {
-            $color_index = $index % count($nice_colors);
+            $color_index = $color_count > 0 ? ($index % $color_count) : 0;
             $color = $nice_colors[$color_index];
             $name = $cat['name'];
 

@@ -16,13 +16,35 @@
     "auth-ajax-actions": [
         "install",
         "uninstall",
-        "submit"
+        "submit",
+        "save-settings",
+        "save-metadata",
+        "approve-submission",
+        "decline-submission"
     ],
     "system-settings": [
         {
             "key": "show_demo_instruments",
             "name": "Show Demo Instruments",
             "type": "checkbox",
+            "repeatable": false
+        },
+        {
+            "key": "enable_public_page",
+            "name": "Enable Public Page",
+            "type": "checkbox",
+            "repeatable": false
+        },
+        {
+            "key": "allow_owner_direct_update",
+            "name": "Allow Owner Direct Updates",
+            "type": "checkbox",
+            "repeatable": false
+        },
+        {
+            "key": "default_decline_email_body",
+            "name": "Default Decline Email Body",
+            "type": "textarea",
             "repeatable": false
         },
         {
@@ -52,6 +74,12 @@
         {
             "key": "categories",
             "name": "Library Categories",
+            "type": "text",
+            "repeatable": true
+        },
+        {
+            "key": "submission_alert_emails",
+            "name": "Submission Alert Emails",
             "type": "text",
             "repeatable": true
         }
