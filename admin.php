@@ -243,18 +243,43 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS(array_merge($instrument
                     </div>
 
                     <!-- Card 5: Submission Alert Notifications -->
-                    <div class="col-12">
-                        <div class="bg-white border rounded-3 p-4 shadow-sm">
-                            <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
-                                <i class="fas fa-envelope text-primary"></i><span>Submission Alert Notifications</span>
-                            </h5>
-                            <p class="text-muted small mb-3">Email addresses listed below will be notified whenever a user submits a new instrument or update.</p>
-                            <div class="input-group mb-3 max-w-500">
-                                <input type="email" class="form-control border-secondary border-opacity-25 py-2 fs-88" id="new-alert-email-input" placeholder="example@<?= $module->getContactEmailDomain(); ?>">
-                                <button class="btn btn-outline-primary fw-semibold px-3 fs-88" type="button" id="add-alert-email-btn"><i class="fas fa-plus me-1"></i>Add Email</button>
+                    <div class="col-12 col-lg-6">
+                        <div class="bg-white border rounded-3 p-4 shadow-sm h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                    <i class="fas fa-envelope text-primary"></i><span>Submission Alert Notifications</span>
+                                </h5>
+                                <p class="text-muted small mb-3">Email addresses listed below will be notified whenever a user submits a new instrument or update.</p>
+                                <div class="mb-3">
+                                    <div class="input-group">
+                                        <input type="email" class="form-control border-secondary border-opacity-25 py-2 fs-88" id="new-alert-email-input" placeholder="example@<?= $module->getContactEmailDomain(); ?>">
+                                        <button class="btn btn-outline-primary fw-semibold px-3 fs-88" type="button" id="add-alert-email-btn"><i class="fas fa-plus me-1"></i>Add Email</button>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="border rounded-3 p-3 bg-light bg-opacity-50 min-h-110">
+                            <div class="border rounded-3 p-3 bg-light bg-opacity-50 flex-fill min-h-110">
                                 <div class="d-flex flex-wrap gap-2" id="settings-emails-list"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 6: Trusted Users -->
+                    <div class="col-12 col-lg-6">
+                        <div class="bg-white border rounded-3 p-4 shadow-sm h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                    <i class="fas fa-user-check text-primary"></i><span>Trusted Users</span>
+                                </h5>
+                                <p class="text-muted small mb-3">Usernames listed below can submit new instruments without approval and update their own instruments regardless of other settings.</p>
+                                <div class="mb-3">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control border-secondary border-opacity-25 py-2 fs-88" id="new-trusted-user-input" placeholder="Enter REDCap username...">
+                                        <button class="btn btn-outline-primary fw-semibold px-3 fs-88" type="button" id="add-trusted-user-btn"><i class="fas fa-user-plus me-1"></i>Add User</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="border rounded-3 p-3 bg-light bg-opacity-50 flex-fill min-h-110">
+                                <div class="d-flex flex-wrap gap-2" id="settings-trusted-users-list"></div>
                             </div>
                         </div>
                     </div>
@@ -537,6 +562,7 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS(array_merge($instrument
     const categoryMapping = <?= json_encode($categories_list); ?>;
     let configuredCategories = <?= json_encode(array_values(array_map(fn($c) => $c['name'], $categories_list))); ?>;
     let configuredAlertEmails = <?= json_encode(array_values($settings['submission_alert_emails']['value'])); ?>;
+    let configuredTrustedUsers = <?= json_encode(array_values($settings['trusted_users']['value'] ?? [])); ?>;
     let defaultDeclineEmailBody = <?= json_encode($settings['default_decline_email_body']['value']); ?>;
     const currentUsername = <?= json_encode($current_username); ?>;
     const allowOwnerBypass = <?= json_encode($settings['allow_owner_direct_update']['value']); ?>;

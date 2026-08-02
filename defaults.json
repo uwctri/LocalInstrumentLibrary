@@ -11,7 +11,8 @@
         "default_submission_alert_email_body": "Hello,\n\nA new data collection instrument has been submitted to the Local Instrument Library for review:\n\nTitle: {title}\nVersion: {version}\nAuthor: {author_name} ({author_email})\nSubmitted By: {submitter}\nDate: {date}\n\nPlease log into REDCap to review and moderate this submission:\n{admin_url}\n\nLocal Instrument Library Module",
         "default_contact_email_domain": "example.edu",
         "allow_owner_direct_update": false,
-        "popular_calculation_method": "relative_60"
+        "popular_calculation_method": "relative_60",
+        "trusted_users": []
     },
     "default_categories": [
         "Cardiology",

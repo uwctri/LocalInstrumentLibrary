@@ -530,6 +530,42 @@ const removeSettingAlertEmail = (emailStr) => {
 };
 window.removeSettingAlertEmail = removeSettingAlertEmail;
 
+const renderSettingsTrustedUsers = () => {
+    const listContainer = $("#settings-trusted-users-list").empty();
+    if (!configuredTrustedUsers || configuredTrustedUsers.length === 0) return listContainer.html('<span class="text-muted small">No trusted users configured. Standard moderation applies to non-admins.</span>');
+    configuredTrustedUsers.forEach((user) => {
+        listContainer.append(`
+            <span class="badge bg-white border text-dark p-2 d-inline-flex align-items-center gap-1.5 shadow-sm fs-8">
+                <i class="fas fa-user-check text-primary me-1 fs-7"></i>${escapeHtml(user)}
+                <i class="fas fa-times text-muted cursor-pointer ms-1 hover-danger" onclick="removeSettingTrustedUser('${escapeHtml(user)}')" title="Remove User"></i>
+            </span>
+        `);
+    });
+};
+
+$("#add-trusted-user-btn").on("click", () => {
+    const input = $("#new-trusted-user-input"), val = input.val().trim();
+    if (!val) return;
+    if (configuredTrustedUsers.some(u => u.toLowerCase() === val.toLowerCase())) return showToast(`<i class="fas fa-exclamation-circle text-warning me-1"></i> User "${escapeHtml(val)}" is already in list.`);
+    configuredTrustedUsers.push(val);
+    input.val("");
+    renderSettingsTrustedUsers();
+});
+
+$("#new-trusted-user-input").on("keypress", (e) => {
+    if (e.which === 13) { e.preventDefault(); $("#add-trusted-user-btn").click(); }
+});
+
+const removeSettingTrustedUser = (userStr) => {
+    configuredTrustedUsers = configuredTrustedUsers.filter(u => u !== userStr);
+    renderSettingsTrustedUsers();
+};
+window.removeSettingTrustedUser = removeSettingTrustedUser;
+
+renderSettingsCategories();
+renderSettingsAlertEmails();
+renderSettingsTrustedUsers();
+
 $("#settings-form").on("submit", function (e) {
     e.preventDefault();
     const btn = $("#save-settings-btn").prop("disabled", true).html('<i class="fas fa-spinner fa-spin me-2"></i>Saving Settings...');
@@ -544,6 +580,7 @@ $("#settings-form").on("submit", function (e) {
         internal_library_blurb: $("#setting-internal-blurb").val().trim(),
         categories: configuredCategories,
         submission_alert_emails: configuredAlertEmails,
+        trusted_users: configuredTrustedUsers,
         default_decline_email_body: $("#setting-decline-email-body").val().trim(),
         allow_owner_direct_update: $("#setting-allow-owner-bypass").is(":checked"),
         sender_email_address: $("#setting-sender-email").val().trim(),

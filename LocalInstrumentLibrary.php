@@ -81,6 +81,7 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             'allow_owner_direct_update' => ['type' => 'bool', 'target' => 'allow_owner_direct_update'],
             'sender_email_address'      => ['type' => 'string', 'target' => 'sender_email_address'],
             'popular_calculation_method' => ['type' => 'string', 'target' => 'popular_calculation_method'],
+            'trusted_users'             => ['type' => 'array', 'target' => 'trusted_users'],
         ];
 
         foreach ($settingsMap as $key => $spec) {
@@ -88,13 +89,9 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             $val = $payload[$key];
             $target = $spec['target'];
 
-            if ($spec['type'] === 'bool') {
-                $this->setSystemSetting($target, (bool)$val);
-            } elseif ($spec['type'] === 'string') {
-                $this->setSystemSetting($target, trim((string)$val));
-            } elseif ($spec['type'] === 'array' && is_array($val)) {
-                $this->setSystemSetting($target, array_values(array_filter(array_map('trim', $val))));
-            }
+            if ($spec['type'] === 'bool') $this->setSystemSetting($target, (bool)$val);
+            elseif ($spec['type'] === 'string') $this->setSystemSetting($target, trim((string)$val));
+            elseif ($spec['type'] === 'array' && is_array($val)) $this->setSystemSetting($target, array_values(array_filter(array_map('trim', $val))));
         }
 
         $this->log("Updated system settings", ['action' => 'save-settings']);
@@ -159,7 +156,9 @@ class LocalInstrumentLibrary extends AbstractExternalModule
 
         $lines = explode("\n", $csvContent);
         $firstLine = true;
-        $nameIdx = 0; $typeIdx = 3; $labelIdx = 4;
+        $nameIdx = 0;
+        $typeIdx = 3;
+        $labelIdx = 4;
         $fields = [];
 
         foreach ($lines as $line) {
@@ -254,6 +253,15 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         return ['status' => 'success', 'fields' => $fields, 'doc_id' => $doc_id];
     }
 
+    public function isTrustedUser($username)
+    {
+        if (empty($username)) return false;
+        if (defined('SUPER_USER') && SUPER_USER) return true;
+        $trusted = $this->getSystemSetting('trusted_users') ?: [];
+        if (!is_array($trusted)) return false;
+        return in_array(strtolower(trim($username)), array_map('strtolower', array_map('trim', $trusted)));
+    }
+
     private function handleSubmitAction($payload, $project_id)
     {
         $subType = $payload['subType'] ?? 'new';
@@ -300,7 +308,11 @@ class LocalInstrumentLibrary extends AbstractExternalModule
                 'versions' => [['version' => $version, 'doc_id' => $doc_id, 'submitted_by' => $submitter, 'submitted_date' => date('Y-m-d')]]
             ];
 
-            if ((bool)$this->getSystemSetting('allow_owner_direct_update') && ($target_inst['owner'] ?? '') === $submitter && $target_inst !== null) {
+            $is_trusted = $this->isTrustedUser($submitter);
+            $is_owner = ($target_inst['owner'] ?? '') === $submitter;
+            $allow_owner_bypass = (bool)$this->getSystemSetting('allow_owner_direct_update');
+
+            if (($is_trusted || ($allow_owner_bypass && $is_owner)) && $target_inst !== null) {
                 $uploaded = $this->loadUploadedInstruments();
                 foreach ($uploaded as $uIdx => $uInst) {
                     if ($uInst['id'] !== $existingId) continue;
@@ -321,8 +333,8 @@ class LocalInstrumentLibrary extends AbstractExternalModule
                 }
                 $this->saveUploadedInstruments($uploaded);
                 $this->sendSubmissionAlertEmail($update_sub['title'], $author_name, $author_email, $submitter, $version);
-                $this->log("Direct instrument update via owner bypass", ['action' => 'owner-bypass-update', 'instrument_id' => $existingId, 'title' => $update_sub['title'], 'version' => $version, 'owner' => $submitter]);
-                return ['status' => 'success', 'message' => 'Update published directly to active library (owner bypass).', 'bypass' => true];
+                $this->log("Direct instrument update published via trusted/owner bypass", ['action' => 'trusted-bypass-update', 'instrument_id' => $existingId, 'title' => $update_sub['title'], 'version' => $version, 'owner' => $submitter]);
+                return ['status' => 'success', 'message' => 'Update published directly to active library.', 'bypass' => true];
             }
 
             $pending_submissions[] = $update_sub;
@@ -334,13 +346,24 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             }
             if ($id_exists) $clean_id .= '_' . time();
 
-            $pending_submissions[] = [
+            $new_sub = [
                 'id' => $clean_id, 'title' => $title, 'categories' => $categories, 'description' => $description,
                 'author_name' => $author_name, 'author_email' => $author_email, 'submitted_by' => $submitter,
                 'submitted_date' => date('Y-m-d'), 'submission_date' => date('Y-m-d'), 'owner' => $submitter,
                 'status' => 'active', 'installs' => 0, 'fields' => $fields,
                 'versions' => [['version' => $version, 'doc_id' => $doc_id, 'submitted_by' => $submitter, 'submitted_date' => date('Y-m-d')]]
             ];
+
+            if ($this->isTrustedUser($submitter)) {
+                $uploaded = $this->loadUploadedInstruments();
+                $uploaded[] = $new_sub;
+                $this->saveUploadedInstruments($uploaded);
+                $this->sendSubmissionAlertEmail($title, $author_name, $author_email, $submitter, $version);
+                $this->log("Direct new instrument published via trusted user bypass", ['action' => 'trusted-bypass-new', 'instrument_id' => $clean_id, 'title' => $title, 'version' => $version, 'owner' => $submitter]);
+                return ['status' => 'success', 'message' => 'New instrument published directly to active library.', 'bypass' => true];
+            }
+
+            $pending_submissions[] = $new_sub;
         }
 
         $this->savePendingSubmissions($pending_submissions);
@@ -376,12 +399,16 @@ class LocalInstrumentLibrary extends AbstractExternalModule
 
         $target_inst = null;
         foreach ($this->getInstruments(null, true) as $inst) {
-            if ($inst['id'] === $inst_id) { $target_inst = $inst; break; }
+            if ($inst['id'] === $inst_id) {
+                $target_inst = $inst;
+                break;
+            }
         }
         if (!$target_inst) return ['status' => 'error', 'message' => 'Instrument not found in library.'];
 
         $metadata = $this->getMetadata($project_id);
-        $all_instruments = []; $all_fields = [];
+        $all_instruments = [];
+        $all_fields = [];
         if (is_array($metadata)) {
             foreach ($metadata as $field) {
                 $all_instruments[$field['form_name']] = $field['form_name'];
@@ -405,7 +432,8 @@ class LocalInstrumentLibrary extends AbstractExternalModule
                 $targetVerClean = ltrim($target_inst['version'] ?? '', 'v');
                 foreach ($target_inst['versions'] as $vObj) {
                     if (ltrim($vObj['version'] ?? '', 'v') === $targetVerClean && !empty($vObj['doc_id'])) {
-                        $doc_id = $vObj['doc_id']; break;
+                        $doc_id = $vObj['doc_id'];
+                        break;
                     }
                 }
                 if (!$doc_id) {
@@ -552,15 +580,23 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         if (empty($id)) return ['status' => 'error', 'message' => 'Submission ID is required.'];
 
         $pending = $this->loadPendingSubmissions();
-        $target_index = -1; $target_sub = null;
+        $target_index = -1;
+        $target_sub = null;
 
         foreach ($pending as $idx => $sub) {
-            if ($sub['id'] === $id) { $target_index = $idx; $target_sub = $sub; break; }
+            if ($sub['id'] === $id) {
+                $target_index = $idx;
+                $target_sub = $sub;
+                break;
+            }
         }
 
         if (!$target_sub && (bool)$this->getSystemSetting('show_demo_instruments')) {
             foreach (($this->getDefaults()['demo_pending_submissions'] ?? []) as $sub) {
-                if ($sub['id'] === $id) { $target_sub = $sub; break; }
+                if ($sub['id'] === $id) {
+                    $target_sub = $sub;
+                    break;
+                }
             }
         }
 
@@ -574,7 +610,10 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         $uploaded = $this->loadUploadedInstruments();
         $existing_index = -1;
         foreach ($uploaded as $uIdx => $uInst) {
-            if ($uInst['id'] === $target_sub['id']) { $existing_index = $uIdx; break; }
+            if ($uInst['id'] === $target_sub['id']) {
+                $existing_index = $uIdx;
+                break;
+            }
         }
 
         $target_sub['status'] = 'active';
@@ -617,15 +656,23 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         if (empty($id)) return ['status' => 'error', 'message' => 'Submission ID is required.'];
 
         $pending = $this->loadPendingSubmissions();
-        $target_index = -1; $target_sub = null;
+        $target_index = -1;
+        $target_sub = null;
 
         foreach ($pending as $idx => $sub) {
-            if ($sub['id'] === $id) { $target_index = $idx; $target_sub = $sub; break; }
+            if ($sub['id'] === $id) {
+                $target_index = $idx;
+                $target_sub = $sub;
+                break;
+            }
         }
 
         if (!$target_sub && (bool)$this->getSystemSetting('show_demo_instruments')) {
             foreach (($this->getDefaults()['demo_pending_submissions'] ?? []) as $sub) {
-                if ($sub['id'] === $id) { $target_sub = $sub; break; }
+                if ($sub['id'] === $id) {
+                    $target_sub = $sub;
+                    break;
+                }
             }
         }
 
@@ -712,9 +759,8 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         }
         unset($inst);
 
-        if (!$includeHidden) {
+        if (!$includeHidden) 
             $combined = array_filter($combined, fn($i) => ($i['status'] ?? 'active') !== 'hidden');
-        }
 
         return array_values($combined);
     }
