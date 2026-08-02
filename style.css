@@ -1,4 +1,3 @@
-/* Local Fonts Loading */
 @font-face {
     font-family: 'Inter';
     src: url('fonts/Inter/Inter-VariableFont_opsz,wght.ttf') format('truetype');
@@ -21,7 +20,6 @@
     height: min-content;
 }
 
-/* Custom style overrides on top of REDCap's Bootstrap 5 */
 #local-instrument-lib-container {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     max-width: 1800px;
@@ -33,9 +31,6 @@
     background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
 }
 
-
-
-/* Custom interactive card overrides */
 #local-instrument-lib-container .instrument-card {
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s;
 }
@@ -48,15 +43,12 @@
 
 #local-instrument-lib-container .instrument-card.installed {
     border-left: 4px solid #198754 !important;
-    /* Bootstrap success color */
 }
 
-/* Custom scroll shadow inside list */
 .shadow-inner {
     box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.04);
 }
 
-/* Contact Author Button custom styling */
 .btn-contact-author {
     background-color: #eff6ff;
     color: #2563eb;
@@ -70,16 +62,12 @@
     border-color: #93c5fd !important;
 }
 
-/* Dynamic field type badge styles are loaded from colors_config.json and injected dynamically */
-
-/* Success highlight overrides for installed buttons */
 .btn-install.is-installed {
     background-color: #198754 !important;
     border-color: #198754 !important;
     opacity: 1 !important;
 }
 
-/* Toast notifications styling */
 .lib-toast {
     position: fixed;
     bottom: 28px;
@@ -109,7 +97,6 @@
     opacity: 1;
 }
 
-/* Custom Category Search Dropdown Items */
 #local-instrument-lib-container .dropdown-item {
     color: #475569 !important;
     font-weight: 500;
@@ -127,7 +114,6 @@
     font-weight: 600;
 }
 
-/* Instrument Submission Uploader Mockup */
 .file-drop-zone {
     border: 2px dashed #cbd5e1;
     background-color: #f8fafc;
@@ -152,7 +138,6 @@
     margin-bottom: 12px;
 }
 
-/* Custom Tab styling */
 #submit-modal .nav-tabs {
     border-bottom: 2px solid #e2e8f0;
 }
@@ -178,7 +163,6 @@
     border-bottom: 2px solid #4f46e5;
 }
 
-/* Card Radio Selection overrides */
 #submit-modal .btn-check:checked+label {
     background-color: #faf5ff !important;
     color: #7c3aed !important;
@@ -199,7 +183,6 @@
     color: #1e293b !important;
 }
 
-/* Category Checkbox buttons */
 #submit-categories-list .btn-check:checked+label {
     background-color: #faf5ff !important;
     border-color: #7c3aed !important;
@@ -229,14 +212,12 @@
     color: #1e293b !important;
 }
 
-/* Prevent validation icons and colors on disabled elements under was-validated */
 .was-validated .form-control:disabled,
 .was-validated .form-select:disabled {
     border-color: #e2e8f0 !important;
     background-image: none !important;
 }
 
-/* Custom preview & download button style to avoid bad outline/border on hover/focus */
 #local-instrument-lib-container .btn-outline-secondary,
 #preview-modal .btn-outline-secondary {
     color: #475569 !important;
@@ -263,7 +244,6 @@
     outline: none !important;
 }
 
-/* Premium Preview Modal Scroll Layout */
 @media (min-width: 768px) {
     #preview-modal .modal-body {
         max-height: 650px;
@@ -284,11 +264,9 @@
     #preview-modal .preview-fields-list {
         overflow-y: auto;
         max-height: 480px;
-        /* limits height so it shrinks to fit short lists, scrollbar appears if exceeded */
     }
 }
 
-/* Remove border highlight from link buttons */
 #preview-modal .btn-link,
 #preview-modal .btn-link:hover,
 #preview-modal .btn-link:focus,
@@ -298,41 +276,34 @@
     box-shadow: none !important;
 }
 
-/* Responsive Grid Overrides considering REDCap's 300px Left Nav Bar */
 #instruments-grid>* {
     flex: 0 0 auto;
     width: 100%;
-    /* Default 1 card per row on mobile */
 }
 
-/* Viewport >= 1100px (available width >= 800px) -> 2 cards per row */
 @media (min-width: 1100px) {
     #instruments-grid>* {
         width: 50% !important;
     }
 }
 
-/* Viewport >= 1600px (available width >= 1300px) -> 3 cards per row */
 @media (min-width: 1600px) {
     #instruments-grid>* {
         width: 33.33333333% !important;
     }
 }
 
-/* Viewport >= 2000px (available width >= 1700px) -> 4 cards per row */
 @media (min-width: 2000px) {
     #instruments-grid>* {
         width: 25% !important;
     }
 }
 
-/* Layout stabilization to prevent height shift during paging */
 #instruments-grid {
     min-height: 640px;
     align-content: flex-start;
 }
 
-/* Modern, thick pagination buttons */
 #pagination-controls .page-link {
     padding: 8px 16px !important;
     font-size: 0.92rem !important;

@@ -1,4 +1,3 @@
-/* Local Fonts Loading */
 @font-face {
     font-family: 'Inter';
     src: url('fonts/Inter/Inter-VariableFont_opsz,wght.ttf') format('truetype');
@@ -13,7 +12,6 @@
     font-style: normal;
 }
 
-/* Force outer page wrapper to center on screen */
 #pagecontainer,
 #sub-viewport {
     max-width: 1400px !important;
@@ -30,7 +28,6 @@
     box-sizing: border-box;
 }
 
-/* Search Bar Styling (Active vs Disabled) */
 #admin-search-wrapper #admin-search {
     background-color: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
@@ -52,7 +49,6 @@
     opacity: 0.65 !important;
 }
 
-/* Custom clean button hover & focus styling across all admin modals */
 .modal-footer .btn:focus,
 .modal-footer .btn:focus-visible,
 .modal-footer .btn:active {
@@ -108,7 +104,6 @@
     opacity: 0.4 !important;
 }
 
-/* Tabs styling overrides */
 #local-instrument-lib-admin-container .admin-tab-bar {
     border-bottom: 2px solid #cbd5e1 !important;
     min-height: 46px;
@@ -179,7 +174,6 @@
     border: none !important;
 }
 
-/* Premium Custom Table styling */
 .table-custom {
     width: 100%;
     border-collapse: separate;
@@ -218,7 +212,6 @@
     opacity: 0.75;
 }
 
-/* Status Badges */
 .badge-status {
     font-size: 0.75rem;
     font-weight: 600;
@@ -239,7 +232,6 @@
     color: #b91c1c;
 }
 
-/* Submission Cards */
 .submission-card {
     border: 1px solid #e2e8f0;
     border-radius: 0.5rem;
@@ -263,7 +255,6 @@
     padding: 1.25rem;
 }
 
-/* Floating Toast Notification */
 .admin-toast {
     position: fixed;
     bottom: 2rem;
@@ -295,7 +286,6 @@
     background-color: #f1f5f9;
 }
 
-/* Public Library Link Button Styling */
 .btn-public-link {
     background-color: #f8fafc !important;
     color: #475569 !important;
@@ -313,7 +303,6 @@
     outline: none !important;
 }
 
-/* Action Buttons & Focus Overrides */
 #local-instrument-lib-admin-container .btn:focus,
 #local-instrument-lib-admin-container .btn:active,
 #local-instrument-lib-admin-container .btn-circle-action:focus,
@@ -370,7 +359,6 @@
     color: #ffffff !important;
 }
 
-/* Custom Category Checkbox styling (matches submission form size & padding) */
 .edit-cat-checkbox:checked+label {
     background-color: #eff6ff !important;
     border-color: #3b82f6 !important;
@@ -378,7 +366,6 @@
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08) !important;
 }
 
-/* DataTables Modern Styling & REDCap Legacy Overrides */
 .dataTables_wrapper {
     padding: 0;
     font-family: inherit;
@@ -481,7 +468,6 @@ table.dataTable tbody tr:hover {
     cursor: not-allowed !important;
 }
 
-/* Review Modal Custom Button & Focus Glow Overrides */
 #review-modal .btn,
 #review-modal .btn:hover,
 #review-modal .btn:focus,
@@ -496,7 +482,6 @@ table.dataTable tbody tr:hover {
     outline: none !important;
 }
 
-/* Approve Toggle Tab & Action Button */
 #review-modal .btn-success,
 #review-modal #review-tab-approve.active {
     background-color: #16a34a !important;
@@ -524,7 +509,6 @@ table.dataTable tbody tr:hover {
     color: #15803d !important;
 }
 
-/* Decline Toggle Tab & Action Button */
 #review-modal .btn-danger,
 #review-modal #review-tab-decline.active {
     background-color: #dc2626 !important;
@@ -552,7 +536,6 @@ table.dataTable tbody tr:hover {
     color: #b91c1c !important;
 }
 
-/* Download Package Buttons Hover */
 #review-version-downloads .btn,
 #review-version-downloads a.btn {
     background-color: #ffffff;
@@ -569,7 +552,6 @@ table.dataTable tbody tr:hover {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
 }
 
-/* Settings Vertical Sub-Nav Styling */
 #settings-pane .nav-pills-settings .nav-link {
     color: #475569 !important;
     font-weight: 600 !important;
