@@ -9,8 +9,11 @@ const showToast = (message, isError = false) => {
     setTimeout(() => toast.removeClass("show"), 12000);
 };
 
-let previewModal = new bootstrap.Modal(document.getElementById('preview-modal'));
-let submitModal = new bootstrap.Modal(document.getElementById('submit-modal'));
+const previewModalEl = document.getElementById('preview-modal');
+let previewModal = previewModalEl ? new bootstrap.Modal(previewModalEl) : null;
+
+const submitModalEl = document.getElementById('submit-modal');
+let submitModal = submitModalEl ? new bootstrap.Modal(submitModalEl) : null;
 let selectedCategories = ["All"];
 let currentPage = 1;
 let rowsPerPage = typeof defaultRowsPerPage !== "undefined" ? defaultRowsPerPage : 2;
@@ -294,7 +297,7 @@ $("#submit-instrument-form").on("submit", (e) => {
                 alert(data && data.message ? data.message : "An error occurred during submission.");
                 return;
             }
-            submitModal.hide();
+            if (submitModal) submitModal.hide();
             $(form).removeClass("was-validated");
             form.reset();
             attachedFile = null;

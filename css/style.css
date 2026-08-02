@@ -4,6 +4,7 @@
 #center { padding-right: 20px; }
 #west { height: min-content; }
 #local-instrument-lib-container { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 1800px; margin-left: 0 !important; margin-right: auto !important; }
+#local-instrument-lib-container.public-container { max-width: 1250px !important; margin-left: auto !important; margin-right: auto !important; }
 #local-instrument-lib-container .lib-header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
 #local-instrument-lib-container .instrument-card { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s; }
 #local-instrument-lib-container .instrument-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important; border-color: #cbd5e1 !important; }

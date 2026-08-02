@@ -88,7 +88,7 @@ if ($popular_method !== 'disabled' && !empty($instruments)) {
 
 <?php if ($is_public): ?><div id="local-instrument-public-wrapper" class="px-4 px-md-5 py-4"><?php endif; ?>
 
-    <div id="local-instrument-lib-container" class="container-fluid py-4 px-3 px-sm-4 bg-light border rounded-3 mt-3 shadow-sm">
+    <div id="local-instrument-lib-container" class="container-fluid py-4 px-3 px-sm-4 bg-light border rounded-3 mt-3 shadow-sm <?= $is_public ? 'public-container' : ''; ?>">
         <div class="lib-header text-white rounded-3 p-4 p-md-5 mb-4 shadow-sm position-relative overflow-hidden">
             <div class="position-relative z-1">
                 <h2 class="display-6 fw-bold mb-2 font-outfit"><?= htmlspecialchars($library_title) ?></h2>
@@ -149,11 +149,13 @@ if ($popular_method !== 'disabled' && !empty($instruments)) {
                     </div>
                 </div>
 
-                <div class="flex-shrink-0">
-                    <button class="btn btn-primary py-2 px-3 fw-semibold d-inline-flex align-items-center gap-2 h-40" data-bs-toggle="modal" data-bs-target="#submit-modal">
-                        <i class="fa-solid fa-cloud-arrow-up"></i><span>Submit Instrument</span>
-                    </button>
-                </div>
+                <?php if (!$is_public): ?>
+                    <div class="flex-shrink-0">
+                        <button class="btn btn-primary py-2 px-3 fw-semibold d-inline-flex align-items-center gap-2 h-40" data-bs-toggle="modal" data-bs-target="#submit-modal">
+                            <i class="fa-solid fa-cloud-arrow-up"></i><span>Submit Instrument</span>
+                        </button>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -322,176 +324,178 @@ if ($popular_method !== 'disabled' && !empty($instruments)) {
         </div>
     </div>
 
-    <div class="modal fade" id="submit-modal" tabindex="-1" aria-labelledby="submit-modal-label" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow-lg rounded-3">
-                <div class="modal-header bg-light border-bottom px-4 py-3">
-                    <h3 class="modal-title m-0 h5 fw-bold text-dark" id="submit-modal-label">
-                        <i class="fa-solid fa-cloud-arrow-up me-2 text-primary"></i>Submit Instrument to Library
-                    </h3>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+    <?php if (!$is_public): ?>
+        <div class="modal fade" id="submit-modal" tabindex="-1" aria-labelledby="submit-modal-label" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow-lg rounded-3">
+                    <div class="modal-header bg-light border-bottom px-4 py-3">
+                        <h3 class="modal-title m-0 h5 fw-bold text-dark" id="submit-modal-label">
+                            <i class="fa-solid fa-cloud-arrow-up me-2 text-primary"></i>Submit Instrument to Library
+                        </h3>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
 
-                <div class="modal-body p-4">
-                    <form id="submit-instrument-form" class="needs-validation" novalidate>
-                        <div class="mb-4">
-                            <label class="form-label small fw-bold text-secondary mb-2 d-block">Submission Type</label>
-                            <div class="row g-3">
-                                <div class="col-6">
-                                    <input type="radio" class="btn-check" name="submission-type" id="type-new" value="new" checked autocomplete="off">
-                                    <label class="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center justify-content-center gap-2 border-2 rounded-3 cursor-pointer" for="type-new">
-                                        <i class="fa-solid fa-circle-plus fs-4"></i>
-                                        <span class="fw-bold small">New Library Instrument</span>
-                                    </label>
-                                </div>
-                                <div class="col-6">
-                                    <input type="radio" class="btn-check" name="submission-type" id="type-update" value="update" autocomplete="off">
-                                    <label class="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center justify-content-center gap-2 border-2 rounded-3 cursor-pointer" for="type-update">
-                                        <i class="fa-solid fa-arrows-rotate fs-4"></i>
-                                        <span class="fw-bold small">Update Existing Instrument</span>
-                                    </label>
+                    <div class="modal-body p-4">
+                        <form id="submit-instrument-form" class="needs-validation" novalidate>
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold text-secondary mb-2 d-block">Submission Type</label>
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <input type="radio" class="btn-check" name="submission-type" id="type-new" value="new" checked autocomplete="off">
+                                        <label class="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center justify-content-center gap-2 border-2 rounded-3 cursor-pointer" for="type-new">
+                                            <i class="fa-solid fa-circle-plus fs-4"></i>
+                                            <span class="fw-bold small">New Library Instrument</span>
+                                        </label>
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="radio" class="btn-check" name="submission-type" id="type-update" value="update" autocomplete="off">
+                                        <label class="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center justify-content-center gap-2 border-2 rounded-3 cursor-pointer" for="type-update">
+                                            <i class="fa-solid fa-arrows-rotate fs-4"></i>
+                                            <span class="fw-bold small">Update Existing Instrument</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="mb-3" id="existing-instrument-wrapper" style="display: none;">
-                            <label for="submit-existing-instrument" class="form-label small fw-bold text-secondary mb-1">Select Instrument to Update</label>
-                            <select class="form-select border-secondary border-opacity-25 py-2" id="submit-existing-instrument">
-                                <option value="" selected disabled>Choose an instrument...</option>
-                                <?php foreach ($instruments as $inst): ?>
-                                    <option value="<?= htmlspecialchars($inst['id']); ?>" data-version="<?= htmlspecialchars($inst['version']); ?>"><?= htmlspecialchars($inst['title']); ?> (<?= htmlspecialchars($inst['version']); ?>)</option>
-                                <?php endforeach; ?>
-                            </select>
-                            <div class="invalid-feedback">Please select an existing instrument to update.</div>
-                        </div>
-
-                        <div class="mb-3" id="submit-title-wrapper">
-                            <label for="submit-title" class="form-label small fw-bold text-secondary mb-1">Instrument Title</label>
-                            <input type="text" class="form-control border-secondary border-opacity-25 py-2" id="submit-title" placeholder="e.g., PHQ-9 Depression Scale" required>
-                            <div class="invalid-feedback">Please enter an instrument title.</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-secondary mb-1">Categories (Select at least one)</label>
-                            <div class="p-3 border border-secondary border-opacity-25 rounded-3 bg-light bg-opacity-50">
-                                <div class="row g-2" id="submit-categories-list">
-                                    <?php foreach ($categories as $index => $catName): ?>
-                                        <?php $catId = 'submit-cat-' . $index; ?>
-                                        <div class="col-6 col-md-4">
-                                            <input class="btn-check submit-cat-checkbox" type="checkbox" value="<?= htmlspecialchars($catName); ?>" id="<?= $catId; ?>" autocomplete="off">
-                                            <label class="btn btn-outline-secondary w-100 py-2 px-3 text-start d-flex align-items-center justify-content-between rounded-3 cursor-pointer" for="<?= $catId; ?>">
-                                                <span class="small fw-semibold text-dark"><?= htmlspecialchars($catName); ?></span>
-                                                <span class="checkbox-box">
-                                                    <i class="fa-regular fa-square text-muted unchecked-icon"></i>
-                                                    <i class="fa-solid fa-square-check text-primary checked-icon d-none"></i>
-                                                </span>
-                                            </label>
-                                        </div>
+                            <div class="mb-3" id="existing-instrument-wrapper" style="display: none;">
+                                <label for="submit-existing-instrument" class="form-label small fw-bold text-secondary mb-1">Select Instrument to Update</label>
+                                <select class="form-select border-secondary border-opacity-25 py-2" id="submit-existing-instrument">
+                                    <option value="" selected disabled>Choose an instrument...</option>
+                                    <?php foreach ($instruments as $inst): ?>
+                                        <option value="<?= htmlspecialchars($inst['id']); ?>" data-version="<?= htmlspecialchars($inst['version']); ?>"><?= htmlspecialchars($inst['title']); ?> (<?= htmlspecialchars($inst['version']); ?>)</option>
                                     <?php endforeach; ?>
+                                </select>
+                                <div class="invalid-feedback">Please select an existing instrument to update.</div>
+                            </div>
+
+                            <div class="mb-3" id="submit-title-wrapper">
+                                <label for="submit-title" class="form-label small fw-bold text-secondary mb-1">Instrument Title</label>
+                                <input type="text" class="form-control border-secondary border-opacity-25 py-2" id="submit-title" placeholder="e.g., PHQ-9 Depression Scale" required>
+                                <div class="invalid-feedback">Please enter an instrument title.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary mb-1">Categories (Select at least one)</label>
+                                <div class="p-3 border border-secondary border-opacity-25 rounded-3 bg-light bg-opacity-50">
+                                    <div class="row g-2" id="submit-categories-list">
+                                        <?php foreach ($categories as $index => $catName): ?>
+                                            <?php $catId = 'submit-cat-' . $index; ?>
+                                            <div class="col-6 col-md-4">
+                                                <input class="btn-check submit-cat-checkbox" type="checkbox" value="<?= htmlspecialchars($catName); ?>" id="<?= $catId; ?>" autocomplete="off">
+                                                <label class="btn btn-outline-secondary w-100 py-2 px-3 text-start d-flex align-items-center justify-content-between rounded-3 cursor-pointer" for="<?= $catId; ?>">
+                                                    <span class="small fw-semibold text-dark"><?= htmlspecialchars($catName); ?></span>
+                                                    <span class="checkbox-box">
+                                                        <i class="fa-regular fa-square text-muted unchecked-icon"></i>
+                                                        <i class="fa-solid fa-square-check text-primary checked-icon d-none"></i>
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <div class="invalid-feedback d-none mt-2" id="categories-invalid-msg">Please select at least one category.</div>
                                 </div>
-                                <div class="invalid-feedback d-none mt-2" id="categories-invalid-msg">Please select at least one category.</div>
                             </div>
-                        </div>
 
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-5">
-                                <label for="submit-author-name" class="form-label small fw-bold text-secondary mb-1">Author Name</label>
-                                <input type="text" class="form-control border-secondary border-opacity-25 py-2" id="submit-author-name" placeholder="Dr. Jane Doe" required>
-                                <div class="invalid-feedback">Please enter the author's name.</div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-5">
+                                    <label for="submit-author-name" class="form-label small fw-bold text-secondary mb-1">Author Name</label>
+                                    <input type="text" class="form-control border-secondary border-opacity-25 py-2" id="submit-author-name" placeholder="Dr. Jane Doe" required>
+                                    <div class="invalid-feedback">Please enter the author's name.</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="submit-author-email" class="form-label small fw-bold text-secondary mb-1">Author Email</label>
+                                    <input type="email" class="form-control border-secondary border-opacity-25 py-2" id="submit-author-email" placeholder="jane.doe@example.edu" required>
+                                    <div class="invalid-feedback">Please enter a valid email address.</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="submit-version" class="form-label small fw-bold text-secondary mb-1">Version Number</label>
+                                    <input type="text" class="form-control border-secondary border-opacity-25 py-2" id="submit-version" value="1.0.0" placeholder="1.0.0" required>
+                                    <div class="invalid-feedback" id="version-invalid-feedback">Please specify a version.</div>
+                                    <div class="form-text text-muted small d-none mt-1" id="version-current-info"></div>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label for="submit-author-email" class="form-label small fw-bold text-secondary mb-1">Author Email</label>
-                                <input type="email" class="form-control border-secondary border-opacity-25 py-2" id="submit-author-email" placeholder="jane.doe@example.edu" required>
-                                <div class="invalid-feedback">Please enter a valid email address.</div>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="submit-version" class="form-label small fw-bold text-secondary mb-1">Version Number</label>
-                                <input type="text" class="form-control border-secondary border-opacity-25 py-2" id="submit-version" value="1.0.0" placeholder="1.0.0" required>
-                                <div class="invalid-feedback" id="version-invalid-feedback">Please specify a version.</div>
-                                <div class="form-text text-muted small d-none mt-1" id="version-current-info"></div>
-                            </div>
-                        </div>
 
-                        <div class="mb-4">
-                            <label for="submit-description" class="form-label small fw-bold text-secondary mb-1">Description / Purpose</label>
-                            <textarea class="form-control border-secondary border-opacity-25" id="submit-description" rows="3" placeholder="Provide a brief description of what this instrument measures and how it should be used..." required></textarea>
-                            <div class="invalid-feedback">Please enter a description.</div>
-                        </div>
+                            <div class="mb-4">
+                                <label for="submit-description" class="form-label small fw-bold text-secondary mb-1">Description / Purpose</label>
+                                <textarea class="form-control border-secondary border-opacity-25" id="submit-description" rows="3" placeholder="Provide a brief description of what this instrument measures and how it should be used..." required></textarea>
+                                <div class="invalid-feedback">Please enter a description.</div>
+                            </div>
 
-                        <div class="mb-4">
-                            <label class="form-label small fw-bold text-secondary mb-2">Instrument Package Source</label>
-                            <ul class="nav nav-tabs mb-3" id="submissionSourceTab" role="tablist">
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link active" id="zip-tab" data-bs-toggle="tab" data-bs-target="#zip-pane" type="button" role="tab" aria-controls="zip-pane" aria-selected="true">
-                                        <i class="fa-solid fa-file-zipper me-2"></i>Upload ZIP Package
-                                    </button>
-                                </li>
-                                <?php if (!$is_public): ?>
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold text-secondary mb-2">Instrument Package Source</label>
+                                <ul class="nav nav-tabs mb-3" id="submissionSourceTab" role="tablist">
                                     <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="project-tab" data-bs-toggle="tab" data-bs-target="#project-pane" type="button" role="tab" aria-controls="project-pane" aria-selected="false">
-                                            <i class="fa-solid fa-folder-minus me-2"></i>Select Current Project Instrument
+                                        <button class="nav-link active" id="zip-tab" data-bs-toggle="tab" data-bs-target="#zip-pane" type="button" role="tab" aria-controls="zip-pane" aria-selected="true">
+                                            <i class="fa-solid fa-file-zipper me-2"></i>Upload ZIP Package
                                         </button>
                                     </li>
-                                <?php endif; ?>
-                            </ul>
+                                    <?php if (!$is_public): ?>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="project-tab" data-bs-toggle="tab" data-bs-target="#project-pane" type="button" role="tab" aria-controls="project-pane" aria-selected="false">
+                                                <i class="fa-solid fa-folder-minus me-2"></i>Select Current Project Instrument
+                                            </button>
+                                        </li>
+                                    <?php endif; ?>
+                                </ul>
 
-                            <div class="tab-content" id="submissionSourceTabContent">
-                                <div class="tab-pane fade show active" id="zip-pane" role="tabpanel" aria-labelledby="zip-tab">
-                                    <div class="file-drop-zone p-4" id="file-drop-zone">
-                                        <i class="fa-solid fa-cloud-arrow-up fs-2 text-primary mb-2"></i>
-                                        <h5 class="h6 text-dark fw-bold mb-1">Drag and drop ZIP file here</h5>
-                                        <p class="text-muted small mb-3">ZIP must contain instrument.csv and OriginID.txt</p>
-                                        <input type="file" id="submit-file-input" class="d-none" accept=".zip">
-                                        <button type="button" class="btn btn-outline-primary btn-sm px-3 fw-semibold">Browse File</button>
+                                <div class="tab-content" id="submissionSourceTabContent">
+                                    <div class="tab-pane fade show active" id="zip-pane" role="tabpanel" aria-labelledby="zip-tab">
+                                        <div class="file-drop-zone p-4" id="file-drop-zone">
+                                            <i class="fa-solid fa-cloud-arrow-up fs-2 text-primary mb-2"></i>
+                                            <h5 class="h6 text-dark fw-bold mb-1">Drag and drop ZIP file here</h5>
+                                            <p class="text-muted small mb-3">ZIP must contain instrument.csv and OriginID.txt</p>
+                                            <input type="file" id="submit-file-input" class="d-none" accept=".zip">
+                                            <button type="button" class="btn btn-outline-primary btn-sm px-3 fw-semibold">Browse File</button>
+                                        </div>
+                                        <div class="form-text text-danger small d-none mt-2" id="file-invalid-msg">Please upload a valid ZIP package file.</div>
+                                        <div class="form-text text-primary small d-none mt-2 fw-semibold" id="file-upload-status"></div>
+
                                     </div>
-                                    <div class="form-text text-danger small d-none mt-2" id="file-invalid-msg">Please upload a valid ZIP package file.</div>
-                                    <div class="form-text text-primary small d-none mt-2 fw-semibold" id="file-upload-status"></div>
 
-                                </div>
-
-                                <?php if (!$is_public): ?>
-                                    <div class="tab-pane fade" id="project-pane" role="tabpanel" aria-labelledby="project-tab">
-                                        <?php
-                                        $metadata = (!empty($project_id)) ? $module->getMetadata($project_id) : [];
-                                        $instruments_in_project = [];
-                                        if (is_array($metadata)) {
-                                            foreach ($metadata as $field) {
-                                                $form_name = $field['form_name'];
-                                                if (!isset($instruments_in_project[$form_name])) {
-                                                    $instruments_in_project[$form_name] = [
-                                                        'name' => $form_name,
-                                                        'label' => ucwords(str_replace('_', ' ', $form_name))
-                                                    ];
+                                    <?php if (!$is_public): ?>
+                                        <div class="tab-pane fade" id="project-pane" role="tabpanel" aria-labelledby="project-tab">
+                                            <?php
+                                            $metadata = (!empty($project_id)) ? $module->getMetadata($project_id) : [];
+                                            $instruments_in_project = [];
+                                            if (is_array($metadata)) {
+                                                foreach ($metadata as $field) {
+                                                    $form_name = $field['form_name'];
+                                                    if (!isset($instruments_in_project[$form_name])) {
+                                                        $instruments_in_project[$form_name] = [
+                                                            'name' => $form_name,
+                                                            'label' => ucwords(str_replace('_', ' ', $form_name))
+                                                        ];
+                                                    }
                                                 }
                                             }
-                                        }
-                                        ?>
-                                        <div class="p-3 bg-light rounded-3 border">
-                                            <label for="submit-project-instrument" class="form-label small fw-bold text-secondary mb-1">Select Instrument from Current Project</label>
-                                            <select class="form-select border-secondary border-opacity-25 py-2" id="submit-project-instrument" disabled>
-                                                <option value="" selected disabled>Choose an instrument...</option>
-                                                <?php foreach ($instruments_in_project as $inst_proj): ?>
-                                                    <option value="<?= htmlspecialchars($inst_proj['name']); ?>"><?= htmlspecialchars($inst_proj['label']); ?> (<?= htmlspecialchars($inst_proj['name']); ?>)</option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                            <div class="invalid-feedback">Please select an instrument from the project.</div>
+                                            ?>
+                                            <div class="p-3 bg-light rounded-3 border">
+                                                <label for="submit-project-instrument" class="form-label small fw-bold text-secondary mb-1">Select Instrument from Current Project</label>
+                                                <select class="form-select border-secondary border-opacity-25 py-2" id="submit-project-instrument" disabled>
+                                                    <option value="" selected disabled>Choose an instrument...</option>
+                                                    <?php foreach ($instruments_in_project as $inst_proj): ?>
+                                                        <option value="<?= htmlspecialchars($inst_proj['name']); ?>"><?= htmlspecialchars($inst_proj['label']); ?> (<?= htmlspecialchars($inst_proj['name']); ?>)</option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <div class="invalid-feedback">Please select an instrument from the project.</div>
+                                            </div>
                                         </div>
-                                    </div>
-                                <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="d-flex justify-content-end gap-2 border-top pt-3">
-                            <button type="button" class="btn btn-light border fw-semibold py-2 px-3" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary fw-semibold py-2 px-4 d-inline-flex align-items-center justify-content-center gap-2 min-w-130" id="submit-form-btn">
-                                <i class="fa-solid fa-paper-plane"></i><span>Submit Request</span>
-                            </button>
-                        </div>
-                    </form>
+                            <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                                <button type="button" class="btn btn-light border fw-semibold py-2 px-3" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary fw-semibold py-2 px-4 d-inline-flex align-items-center justify-content-center gap-2 min-w-130" id="submit-form-btn">
+                                    <i class="fa-solid fa-paper-plane"></i><span>Submit Request</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    <?php endif; ?>
 
     <div class="lib-toast" id="lib-toast">
         <i class="fa-solid fa-circle-check success-icon text-success"></i>

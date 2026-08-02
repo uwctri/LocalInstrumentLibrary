@@ -1,8 +1,11 @@
 import { escapeHtml, renderFieldListItem, compareSemanticVersions, renderCategoryBadgesHtml, downloadMockFile, downloadMockVersion } from './utils.js';
 
-let previewModalObj = new bootstrap.Modal(document.getElementById('preview-modal'));
-let editModalObj = new bootstrap.Modal(document.getElementById('edit-modal'));
-let reviewModalObj = new bootstrap.Modal(document.getElementById('review-modal'));
+const previewModalEl = document.getElementById('preview-modal');
+let previewModalObj = previewModalEl ? new bootstrap.Modal(previewModalEl) : null;
+const editModalEl = document.getElementById('edit-modal');
+let editModalObj = editModalEl ? new bootstrap.Modal(editModalEl) : null;
+const reviewModalEl = document.getElementById('review-modal');
+let reviewModalObj = reviewModalEl ? new bootstrap.Modal(reviewModalEl) : null;
 
 $("#admin-search").on("input", (e) => {
     if ($("#adminTabs .nav-link.active").attr("id") === "active-tab") {
@@ -54,12 +57,12 @@ $("#edit-instrument-form").on("submit", (e) => {
         const saveBtn = $("#save-edit-btn").prop("disabled", true).html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
         module.ajax("save-metadata", { id, title, description: desc, categories: selectedCats, author_name: authorName, author_email: authorEmail, owner }).then(response => {
             saveBtn.prop("disabled", false).html('<i class="fas fa-save me-2"></i>Save Changes');
-            editModalObj.hide();
+            if (editModalObj) editModalObj.hide();
             renderActiveLibrary();
             showToast(response && response.status === 'success' ? `<i class="fas fa-save text-success me-1"></i> "${title}" metadata updated!` : `<i class="fas fa-exclamation-triangle text-danger me-1"></i> ${response ? response.message : 'Error.'}`);
         }).catch(() => {
             saveBtn.prop("disabled", false).html('<i class="fas fa-save me-2"></i>Save Changes');
-            editModalObj.hide();
+            if (editModalObj) editModalObj.hide();
             showToast('<i class="fas fa-exclamation-triangle text-danger me-1"></i> Error saving metadata.');
         });
         return;
@@ -75,7 +78,7 @@ $("#edit-instrument-form").on("submit", (e) => {
     if (owner) pendingSubmissions[subIndex].owner = owner;
 
     renderPendingSubmissions();
-    editModalObj.hide();
+    if (editModalObj) editModalObj.hide();
     showToast(`<i class="fas fa-save text-success me-1"></i> Submission "${title}" metadata updated!`);
 });
 
@@ -235,7 +238,7 @@ const openEditModal = (id, type = 'active') => {
 
     $("#edit-instrument-form").removeClass("was-validated");
     $("#edit-categories-invalid").addClass("d-none");
-    editModalObj.show();
+    if (editModalObj) editModalObj.show();
 };
 
 const openPreview = (id, type) => {
@@ -278,7 +281,7 @@ const openPreview = (id, type) => {
         `);
     });
 
-    previewModalObj.show();
+    if (previewModalObj) previewModalObj.show();
 };
 
 let currentReviewDecision = 'approve';
@@ -334,7 +337,7 @@ const openReviewModal = (id) => {
 
     switchReviewDecisionTab('approve');
     goToReviewStep(1);
-    reviewModalObj.show();
+    if (reviewModalObj) reviewModalObj.show();
 };
 
 const switchReviewDecisionTab = (mode) => {
@@ -426,14 +429,14 @@ const performReviewApprove = () => {
     const id = $("#review-id").val(), btn = $("#review-finalize-approve-btn").prop("disabled", true).html('<i class="fas fa-spinner fa-spin me-2"></i>Publishing...');
     module.ajax("approve-submission", { id: id }).then(response => {
         btn.prop("disabled", false);
-        reviewModalObj.hide();
+        if (reviewModalObj) reviewModalObj.hide();
         if (response && response.status === 'success') {
             showToast('<i class="fas fa-check-circle text-success me-1"></i> Submission approved!');
             setTimeout(() => location.reload(), 1000);
         } else showToast(`<i class="fas fa-exclamation-triangle text-danger me-1"></i> ${response ? response.message : 'Error.'}`);
     }).catch(() => {
         btn.prop("disabled", false);
-        reviewModalObj.hide();
+        if (reviewModalObj) reviewModalObj.hide();
         showToast('<i class="fas fa-exclamation-triangle text-danger me-1"></i> Error approving submission.');
     });
 };
@@ -442,14 +445,14 @@ const performReviewDecline = (sendEmail) => {
     const id = $("#review-id").val(), reason = $("#review-decline-reason").val(), btn = (sendEmail ? $("#review-finalize-decline-send-btn") : $("#review-finalize-decline-skip-btn")).prop("disabled", true);
     module.ajax("decline-submission", { id, send_email: sendEmail, reason }).then(response => {
         btn.prop("disabled", false);
-        reviewModalObj.hide();
+        if (reviewModalObj) reviewModalObj.hide();
         if (response && response.status === 'success') {
             showToast('<i class="fas fa-trash-alt text-danger me-1"></i> Submission declined.');
             setTimeout(() => location.reload(), 1000);
         } else showToast(`<i class="fas fa-exclamation-triangle text-danger me-1"></i> ${response ? response.message : 'Error.'}`);
     }).catch(() => {
         btn.prop("disabled", false);
-        reviewModalObj.hide();
+        if (reviewModalObj) reviewModalObj.hide();
         showToast('<i class="fas fa-exclamation-triangle text-danger me-1"></i> Error declining submission.');
     });
 };
