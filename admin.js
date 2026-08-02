@@ -830,7 +830,9 @@ $("#settings-form").on("submit", function (e) {
         categories: configuredCategories,
         submission_alert_emails: configuredAlertEmails,
         default_decline_email_body: $("#setting-decline-email-body").val().trim(),
-        allow_owner_direct_update: $("#setting-allow-owner-bypass").is(":checked")
+        allow_owner_direct_update: $("#setting-allow-owner-bypass").is(":checked"),
+        sender_email_address: $("#setting-sender-email").val().trim(),
+        popular_calculation_method: $("#setting-popular-method").val()
     };
 
     module.ajax("save-settings", payload).then((response) => {
@@ -847,15 +849,17 @@ $("#settings-form").on("submit", function (e) {
     });
 });
 
-// Tab State Manager (Disable search bar on Settings tab)
+// Tab State Manager (Disable search bar on Settings tab, toggle floating Save button)
 $('button[data-bs-toggle="tab"]').on('shown.bs.tab', (e) => {
     const targetId = $(e.target).attr('id');
     if (targetId === 'settings-tab') {
         $("#admin-search").prop("disabled", true);
         $("#admin-search-wrapper").addClass("disabled-wrapper");
+        $("#save-settings-btn-container").removeClass("d-none");
     } else {
         $("#admin-search").prop("disabled", false);
         $("#admin-search-wrapper").removeClass("disabled-wrapper");
+        $("#save-settings-btn-container").addClass("d-none");
     }
 });
 

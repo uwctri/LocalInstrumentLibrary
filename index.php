@@ -175,11 +175,28 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS($instruments, [
 
             <!-- Instruments Cards Grid -->
             <?php
+            $popular_method = (string)($module->getSystemSetting('popular_calculation_method') ?: 'relative_60');
             $all_installs = array_map(function ($i) {
                 return (int)($i['installs'] ?? 0);
             }, $instruments);
             $max_installs = !empty($all_installs) ? max($all_installs) : 0;
             $popular_threshold = max(5, floor($max_installs * 0.6));
+
+            $top_3_ids = [];
+            if ($popular_method === 'top_3') {
+                $sorted_insts = $instruments;
+                usort($sorted_insts, function ($a, $b) {
+                    return ((int)($b['installs'] ?? 0)) <=> ((int)($a['installs'] ?? 0));
+                });
+                $top_3_count = 0;
+                foreach ($sorted_insts as $s_inst) {
+                    $cnt = (int)($s_inst['installs'] ?? 0);
+                    if ($cnt > 0 && $top_3_count < 3) {
+                        $top_3_ids[$s_inst['id']] = true;
+                        $top_3_count++;
+                    }
+                }
+            }
             ?>
             <div class="row g-4" id="instruments-grid">
                 <?php foreach ($instruments as $inst): ?>
@@ -223,7 +240,18 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS($instruments, [
                                         </div>
                                         <?php
                                         $installs_count = (int)($inst['installs'] ?? 0);
-                                        $is_popular = ($installs_count >= 5 && $installs_count >= $popular_threshold);
+                                        $is_popular = false;
+                                        if ($popular_method === 'disabled') {
+                                            $is_popular = false;
+                                        } else if ($popular_method === 'min_5') {
+                                            $is_popular = ($installs_count >= 5);
+                                        } else if ($popular_method === 'min_10') {
+                                            $is_popular = ($installs_count >= 10);
+                                        } else if ($popular_method === 'top_3') {
+                                            $is_popular = isset($top_3_ids[$inst['id']]);
+                                        } else {
+                                            $is_popular = ($installs_count >= 5 && $installs_count >= $popular_threshold);
+                                        }
                                         if ($is_popular):
                                         ?>
                                             <div class="meta-item d-flex align-items-center gap-1">
@@ -564,7 +592,7 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS($instruments, [
         // Use REDCap's own footer. PrintFooter() prefixes two orphan </div> tags
         // that close its internal layout divs — capture and strip those, then force
         // #footer visible (it defaults to d-none in REDCap's layout JS).
-        $htmlPage = new \HtmlPage();
+        $htmlPage = new HtmlPage();
         ob_start();
         $htmlPage->PrintFooter();
         $footer_html = ob_get_clean();

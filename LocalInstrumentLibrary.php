@@ -8,6 +8,7 @@ use MetaData;
 use REDCap;
 use Files;
 use ZipArchive;
+use Exception;
 
 class LocalInstrumentLibrary extends AbstractExternalModule
 {
@@ -131,6 +132,16 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         if (isset($payload['allow_owner_direct_update']))
             $this->setSystemSetting('allow_owner_direct_update', (bool)$payload['allow_owner_direct_update']);
 
+        if (isset($payload['sender_email_address']))
+            $this->setSystemSetting('sender_email_address', trim((string)$payload['sender_email_address']));
+
+        if (isset($payload['popular_calculation_method']))
+            $this->setSystemSetting('popular_calculation_method', trim((string)$payload['popular_calculation_method']));
+
+        $this->log("Updated system settings", [
+            'action' => 'save-settings'
+        ]);
+
         return ['status' => 'success', 'message' => 'System settings saved successfully.'];
     }
 
@@ -148,7 +159,7 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             if (isset($payload['title']))       $uploaded[$uIdx]['title']       = trim((string)$payload['title']);
             if (isset($payload['description'])) $uploaded[$uIdx]['description'] = trim((string)$payload['description']);
             if (isset($payload['author_name'])) $uploaded[$uIdx]['author_name'] = trim((string)$payload['author_name']);
-            if (isset($payload['author_email']))$uploaded[$uIdx]['author_email']= trim((string)$payload['author_email']);
+            if (isset($payload['author_email'])) $uploaded[$uIdx]['author_email'] = trim((string)$payload['author_email']);
             if (isset($payload['owner']))       $uploaded[$uIdx]['owner']       = trim((string)$payload['owner']);
             if (isset($payload['categories']) && is_array($payload['categories']))
                 $uploaded[$uIdx]['categories'] = array_values(array_filter(array_map('trim', $payload['categories'])));
@@ -160,6 +171,14 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             return ['status' => 'error', 'message' => 'Instrument not found in active library.'];
 
         $this->saveUploadedInstruments($uploaded);
+
+        $this->log("Updated instrument metadata", [
+            'action'        => 'save-metadata',
+            'instrument_id' => $id,
+            'title'         => $payload['title'] ?? '',
+            'owner'         => $payload['owner'] ?? ''
+        ]);
+
         return ['status' => 'success', 'message' => 'Instrument metadata saved successfully.'];
     }
 
@@ -429,7 +448,7 @@ class LocalInstrumentLibrary extends AbstractExternalModule
                     $uploaded[$uIdx]['categories']  = $update_sub['categories'];
                     $uploaded[$uIdx]['description'] = $update_sub['description'];
                     $uploaded[$uIdx]['author_name'] = $update_sub['author_name'];
-                    $uploaded[$uIdx]['author_email']= $update_sub['author_email'];
+                    $uploaded[$uIdx]['author_email'] = $update_sub['author_email'];
                     $uploaded[$uIdx]['fields']      = $update_sub['fields'];
                     $existing_versions = $uploaded[$uIdx]['versions'] ?? [];
                     $vExists = false;
@@ -443,6 +462,13 @@ class LocalInstrumentLibrary extends AbstractExternalModule
                 }
                 $this->saveUploadedInstruments($uploaded);
                 $this->sendSubmissionAlertEmail($update_sub['title'], $author_name, $author_email, $submitter, $version);
+                $this->log("Direct instrument update via owner bypass", [
+                    'action'        => 'owner-bypass-update',
+                    'instrument_id' => $existingId,
+                    'title'         => $update_sub['title'],
+                    'version'       => $version,
+                    'owner'         => $submitter
+                ]);
                 return ['status' => 'success', 'message' => 'Update published directly to active library (owner bypass).', 'bypass' => true];
             }
 
@@ -502,27 +528,20 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             $admin_url = preg_replace('#/redcap_v\d+\.\d+\.\d+/#i', '/', $admin_url);
         }
 
+        $defaults = $this->getDefaults();
+        $template = $defaults['default_settings']['default_submission_alert_email_body'] ?? "";
         $subject = "[Local Instrument Library] New Instrument Submission: " . $title;
-        $body = "Hello,\n\n";
-        $body .= "A new data collection instrument has been submitted to the Local Instrument Library for review:\n\n";
-        $body .= "Title: " . $title . "\n";
-        $body .= "Version: " . $version . "\n";
-        $body .= "Author: " . $author_name . " (" . $author_email . ")\n";
-        $body .= "Submitted By: " . $submitter . "\n";
-        $body .= "Date: " . date('Y-m-d H:i:s') . "\n\n";
-        $body .= "Please log into REDCap to review and moderate this submission:\n";
-        $body .= $admin_url . "\n\n";
-        $body .= "Local Instrument Library Module";
+        $body = str_replace(
+            ['{title}', '{version}', '{author_name}', '{author_email}', '{submitter}', '{date}', '{admin_url}'],
+            [$title, $version, $author_name, $author_email, $submitter, date('Y-m-d H:i:s'), $admin_url],
+            $template
+        );
 
+        $from = $this->getSenderEmailAddress();
         foreach ($emails as $to) {
             $to = trim($to);
-            if (!empty($to) && filter_var($to, FILTER_VALIDATE_EMAIL)) {
-                if (method_exists($this, 'sendEmail')) {
-                    $this->sendEmail($to, 'noreply@redcap.edu', $subject, $body);
-                } elseif (class_exists('REDCap') && method_exists('REDCap', 'email')) {
-                    \REDCap::email($to, 'noreply@redcap.edu', $subject, $body);
-                }
-            }
+            if (!empty($to) && filter_var($to, FILTER_VALIDATE_EMAIL))
+                REDCap::email($to, $from, $subject, $body);
         }
     }
 
@@ -703,6 +722,15 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             $this->setProjectSetting('installed_instruments', $installed_instruments, $project_id);
         }
 
+        REDCap::logEvent(
+            "Install instrument from Local Instrument Library",
+            "Form Name: {$inst_id}\nTitle: " . ($target_inst['title'] ?? '') . "\nVersion: " . ($target_inst['version'] ?? '1.0.0'),
+            "",
+            null,
+            null,
+            $project_id
+        );
+
         return ['status' => 'success', 'installed' => $installed_instruments];
     }
 
@@ -718,6 +746,15 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             $installed_instruments = array_values($installed_instruments);
             $this->setProjectSetting('installed_instruments', $installed_instruments, $project_id);
         }
+
+        REDCap::logEvent(
+            "Remove instrument tracking from Local Instrument Library",
+            "Form Name: {$inst_id}",
+            "",
+            null,
+            null,
+            $project_id
+        );
 
         return ['status' => 'success', 'message' => 'Removed instrument'];
     }
@@ -855,6 +892,12 @@ class LocalInstrumentLibrary extends AbstractExternalModule
 
         $this->sendApprovalEmailToSubmitter($target_sub);
 
+        $this->log("Approved instrument submission", [
+            'action'        => 'approve-submission',
+            'instrument_id' => $id,
+            'title'         => $target_sub['title'] ?? ''
+        ]);
+
         return ['status' => 'success', 'message' => 'Submission approved and published to active library.'];
     }
 
@@ -921,6 +964,13 @@ class LocalInstrumentLibrary extends AbstractExternalModule
             $this->sendDeclineEmailToSubmitter($target_sub, $reason);
         }
 
+        $this->log("Declined instrument submission", [
+            'action'        => 'decline-submission',
+            'instrument_id' => $id,
+            'title'         => $target_sub['title'] ?? '',
+            'reason'        => $reason
+        ]);
+
         return ['status' => 'success', 'message' => 'Submission declined and removed.'];
     }
 
@@ -930,18 +980,14 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL))
             return;
 
+        $defaults = $this->getDefaults();
+        $template = $defaults['default_settings']['default_approval_email_body'] ?? "";
         $subject = "[Local Instrument Library] Submission Approved: " . $sub['title'];
-        $body = "Hello " . ($sub['author_name'] ?: 'Submitter') . ",\n\n";
-        $body .= "Great news! Your submitted data collection instrument, \"" . $sub['title'] . "\", has been approved by the REDCap Administrator.\n\n";
-        $body .= "It is now live in the Local Instrument Library and available for REDCap users across your institution to browse and install into their projects.\n\n";
-        $body .= "Thank you for contributing to our organization's data collection standards!\n\n";
-        $body .= "Local Instrument Library Module";
+        $greeting = "Hello " . ($sub['author_name'] ?: 'Submitter') . ",\n\n";
+        $body = $greeting . str_replace('{title}', $sub['title'], $template);
 
-        if (method_exists($this, 'sendEmail')) {
-            $this->sendEmail($to, 'noreply@redcap.edu', $subject, $body);
-        } elseif (class_exists('REDCap') && method_exists('REDCap', 'email')) {
-            \REDCap::email($to, 'noreply@redcap.edu', $subject, $body);
-        }
+        $from = $this->getSenderEmailAddress();
+        REDCap::email($to, $from, $subject, $body);
     }
 
     private function sendDeclineEmailToSubmitter($sub, $reason)
@@ -950,24 +996,38 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL))
             return;
 
-        if (empty($reason)) {
-            $reason = (string)$this->getSystemSetting('default_decline_email_body');
+        $defaults = $this->getDefaults();
+        $template = (string)$this->getSystemSetting('default_decline_email_body');
+        if (empty($template)) {
+            $template = (string)($defaults['default_settings']['default_decline_email_body'] ?? '');
         }
+
+        $reasonText = !empty($reason) ? $reason : "No specific reason provided.";
 
         $subject = "[Local Instrument Library] Submission Update: " . $sub['title'];
-        $body = "Hello " . ($sub['author_name'] ?: 'Submitter') . ",\n\n";
-        $body .= "Thank you for submitting your data collection instrument, \"" . $sub['title'] . "\", to the Local Instrument Library.\n\n";
-        $body .= "After review, the REDCap Administrator has declined this submission.\n\n";
-        $body .= "Feedback / Reason provided by Administrator:\n";
-        $body .= $reason . "\n\n";
-        $body .= "If you have questions or would like to make revisions, please reach out to your REDCap Administrator.\n\n";
-        $body .= "Local Instrument Library Module";
+        $greeting = "Hello " . ($sub['author_name'] ?: 'Submitter') . ",\n\n";
+        $body = $greeting . str_replace(
+            ['{title}', '{reason}'],
+            [$sub['title'], $reasonText],
+            $template
+        );
 
-        if (method_exists($this, 'sendEmail')) {
-            $this->sendEmail($to, 'noreply@redcap.edu', $subject, $body);
-        } elseif (class_exists('REDCap') && method_exists('REDCap', 'email')) {
-            \REDCap::email($to, 'noreply@redcap.edu', $subject, $body);
-        }
+        $from = $this->getSenderEmailAddress();
+        REDCap::email($to, $from, $subject, $body);
+    }
+
+    public function getSenderEmailAddress()
+    {
+        $configured = (string)$this->getSystemSetting('sender_email_address');
+        $configured = trim($configured);
+        if (!empty($configured) && filter_var($configured, FILTER_VALIDATE_EMAIL))
+            return $configured;
+
+        $defaultAdmin = trim($GLOBALS['homepage_contact_email']);
+        if (!empty($defaultAdmin) && filter_var($defaultAdmin, FILTER_VALIDATE_EMAIL))
+            return $defaultAdmin;
+
+        return 'redcap@' . $this->getContactEmailDomain();
     }
 
     public function getInstruments($includeDemos = null)
@@ -1132,7 +1192,7 @@ class LocalInstrumentLibrary extends AbstractExternalModule
 
         $nice_colors = $defaults['category_colors'] ?? [];
         if (empty($nice_colors)) {
-            throw new \Exception("Category color definitions missing in defaults.json.");
+            throw new Exception("Category color definitions missing in defaults.json.");
         }
 
         $categories_list = [];

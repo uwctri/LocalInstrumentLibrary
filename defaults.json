@@ -6,9 +6,12 @@
         "internal_library_blurb": "Browse and install pre-approved data collection instruments directly into your current REDCap project. Select from validated clinical scales, standard demographics questionnaires, and specialized screeners.",
         "show_demo_instruments": true,
         "enable_public_page": true,
-        "default_decline_email_body": "Thank you for submitting your instrument to the Local Instrument Library. After review by our REDCap administration team, this submission has been declined at this time. If you have questions or need to submit a revised version, please reach out to your site administrator.",
+        "default_decline_email_body": "Thank you for submitting your data collection instrument, \"{title}\", to the Local Instrument Library.\n\nAfter review, the REDCap Administrator has declined this submission.\n\nFeedback / Reason provided by Administrator:\n{reason}\n\nIf you have questions or would like to make revisions, please reach out to your REDCap Administrator.\n\nLocal Instrument Library Module",
+        "default_approval_email_body": "Great news! Your submitted data collection instrument, \"{title}\", has been approved by the REDCap Administrator.\n\nIt is now live in the Local Instrument Library and available for REDCap users across your institution to browse and install into their projects.\n\nThank you for contributing to our organization's data collection standards!\n\nLocal Instrument Library Module",
+        "default_submission_alert_email_body": "Hello,\n\nA new data collection instrument has been submitted to the Local Instrument Library for review:\n\nTitle: {title}\nVersion: {version}\nAuthor: {author_name} ({author_email})\nSubmitted By: {submitter}\nDate: {date}\n\nPlease log into REDCap to review and moderate this submission:\n{admin_url}\n\nLocal Instrument Library Module",
         "default_contact_email_domain": "example.edu",
-        "allow_owner_direct_update": false
+        "allow_owner_direct_update": false,
+        "popular_calculation_method": "relative_60"
     },
     "default_categories": [
         "Cardiology",

@@ -3,11 +3,12 @@
 namespace UWMadison\LocalInstrumentLibrary;
 
 use Files;
+use Exception;
 
 /** @var \UWMadison\LocalInstrumentLibrary\LocalInstrumentLibrary $module */
 
 if (empty($_GET['doc_id']))
-    throw new \Exception("Missing doc_id parameter for file download.");
+    throw new Exception("Missing doc_id parameter for file download.");
 
 $doc_id = $_GET['doc_id'];
 

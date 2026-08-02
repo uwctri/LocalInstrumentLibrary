@@ -26,6 +26,9 @@ $setting_internal_blurb = (string)$module->getSystemSetting('internal_library_bl
 $setting_alert_emails = (array)($module->getSystemSetting('submission_alert_emails') ?? []);
 $setting_decline_email_body = (string)$module->getSystemSetting('default_decline_email_body');
 $setting_allow_owner_bypass = (bool)$module->getSystemSetting('allow_owner_direct_update');
+$setting_sender_email = (string)$module->getSystemSetting('sender_email_address');
+$setting_popular_method = (string)($module->getSystemSetting('popular_calculation_method') ?: 'relative_60');
+$default_sender_email = $module->getSenderEmailAddress();
 $current_username = defined('USERID') ? USERID : '';
 
 $dynamic_category_styles = $module->renderCategoryCSS($categories_list, [
@@ -76,8 +79,8 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS($all_admin_instruments,
     </div>
 
     <!-- Navigation Tabs (flat on background, controls inner content) -->
-    <div class="mb-4">
-        <ul class="nav nav-tabs nav-tabs-custom mb-3 border-0" id="adminTabs" role="tablist">
+    <div class="d-flex align-items-center justify-content-between mb-4 admin-tab-bar position-relative">
+        <ul class="nav nav-tabs nav-tabs-custom border-0 m-0" id="adminTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active d-flex align-items-center" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-pane" type="button" role="tab" aria-controls="active-pane" aria-selected="true">
                     <i class="fas fa-table me-2"></i>Active Library (<span id="active-count"><?= count($instruments); ?></span>)
@@ -86,7 +89,7 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS($all_admin_instruments,
             <li class="nav-item" role="presentation">
                 <button class="nav-link d-flex align-items-center" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-pane" type="button" role="tab" aria-controls="pending-pane" aria-selected="false">
                     <i class="fas fa-history me-2"></i>Pending Submissions
-                    <span class="badge bg-danger ms-2" id="pending-badge" style="font-size: 0.82rem; font-weight: 600; padding: 0.25rem 0.55rem; border-radius: 9999px;"><?= count($dummy_submissions); ?></span>
+                    <span class="badge bg-danger ms-2" id="pending-badge" style="font-size: 0.75rem; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 9999px; align-self: center;"><?= count($dummy_submissions); ?></span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -95,6 +98,14 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS($all_admin_instruments,
                 </button>
             </li>
         </ul>
+
+        <div id="save-settings-btn-container" class="d-none">
+            <button type="submit" form="settings-form" class="btn btn-primary px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm" id="save-settings-btn" style="font-size: 0.88rem; line-height: 1.2;">
+                <i class="fas fa-save"></i>
+                <span>Save Settings</span>
+            </button>
+        </div>
+    </div>
 
         <!-- Tab Content -->
         <div class="tab-content" id="adminTabsContent">
@@ -157,42 +168,106 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS($all_admin_instruments,
 
             <!-- Module Settings Tab -->
             <div class="tab-pane fade" id="settings-pane" role="tabpanel" aria-labelledby="settings-tab">
-                <form id="settings-form" novalidate>
+                <form id="settings-form" novalidate class="d-flex flex-column gap-4">
+                    <!-- Section 1: Categories & System Controls (2 Equal Columns) -->
                     <div class="row g-4">
-                        <!-- Left Column: Settings Cards -->
-                        <div class="col-12 col-lg-7 d-flex flex-column gap-4">
-                            <!-- Demo Instruments Switch -->
-                            <div class="bg-white border rounded-3 p-4 shadow-sm">
-                                <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
-                                    <i class="fas fa-flask text-primary"></i>
-                                    <span>Demonstration Data</span>
-                                </h5>
-                                <div class="form-check form-switch p-0 d-flex align-items-center justify-content-between gap-3">
-                                    <div>
-                                        <label for="setting-show-demo" class="fw-semibold text-dark mb-1 d-block cursor-pointer">Show Demo Instruments</label>
-                                        <p class="text-muted small mb-0">Include pre-configured demonstration instruments and mock pending submissions in the library.</p>
+                        <div class="col-12 col-lg-6">
+                            <!-- Library Categories Card -->
+                            <div class="bg-white border rounded-3 p-4 shadow-sm h-100 d-flex flex-column justify-content-between">
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                        <i class="fas fa-tags text-primary"></i>
+                                        <span>Library Categories</span>
+                                    </h5>
+                                    <p class="text-muted small mb-3">Manage categories available for classifying data collection instruments across the library.</p>
+
+                                    <div class="mb-3">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control border-secondary border-opacity-25 py-2" id="new-category-input" placeholder="Add new category...">
+                                            <button class="btn btn-outline-primary fw-semibold px-3" type="button" id="add-category-btn">
+                                                <i class="fas fa-plus me-1"></i>Add Category
+                                            </button>
+                                        </div>
                                     </div>
-                                    <input class="form-check-input flex-shrink-0 cursor-pointer m-0" type="checkbox" id="setting-show-demo" style="width: 2.75em; height: 1.5em;" <?= $setting_show_demo ? 'checked' : ''; ?>>
+                                </div>
+
+                                <div class="border rounded-3 p-3 bg-light bg-opacity-50 flex-fill" style="min-height: 110px;">
+                                    <div class="d-flex flex-wrap gap-2" id="settings-categories-list">
+                                        <!-- Categories rendered dynamically -->
+                                    </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Owner Direct Update Switch -->
-                            <div class="bg-white border rounded-3 p-4 shadow-sm">
-                                <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
-                                    <i class="fas fa-user-shield text-primary"></i>
-                                    <span>Owner Permissions</span>
-                                </h5>
-                                <div class="form-check form-switch p-0 d-flex align-items-center justify-content-between gap-3">
-                                    <div>
-                                        <label for="setting-allow-owner-bypass" class="fw-semibold text-dark mb-1 d-block cursor-pointer">Allow Owner Direct Updates</label>
-                                        <p class="text-muted small mb-0">When enabled, the recorded owner of an instrument can submit version updates that bypass admin approval and go live immediately.</p>
+                        <div class="col-12 col-lg-6">
+                            <!-- System Controls & Badging Rules Card -->
+                            <div class="bg-white border rounded-3 p-4 shadow-sm h-100 d-flex flex-column justify-content-between">
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                                        <i class="fas fa-sliders-h text-primary"></i>
+                                        <span>System Controls & Rules</span>
+                                    </h5>
+
+                                    <div class="form-check form-switch p-0 d-flex align-items-center justify-content-between gap-3 mb-3 pb-3 border-bottom">
+                                        <div>
+                                            <label for="setting-show-demo" class="fw-semibold text-dark mb-1 d-flex align-items-center gap-2 cursor-pointer">
+                                                <i class="fas fa-flask text-primary opacity-85" style="font-size: 0.9rem;"></i>
+                                                <span>Show Demo Instruments</span>
+                                            </label>
+                                            <p class="text-muted small mb-0">Include pre-configured demonstration instruments in the library.</p>
+                                        </div>
+                                        <input class="form-check-input flex-shrink-0 cursor-pointer m-0" type="checkbox" id="setting-show-demo" style="width: 2.75em; height: 1.5em;" <?= $setting_show_demo ? 'checked' : ''; ?>>
                                     </div>
-                                    <input class="form-check-input flex-shrink-0 cursor-pointer m-0" type="checkbox" id="setting-allow-owner-bypass" style="width: 2.75em; height: 1.5em;" <?= $setting_allow_owner_bypass ? 'checked' : ''; ?>>
+
+                                    <div class="form-check form-switch p-0 d-flex align-items-center justify-content-between gap-3 mb-3 pb-3 border-bottom">
+                                        <div>
+                                            <label for="setting-allow-owner-bypass" class="fw-semibold text-dark mb-1 d-flex align-items-center gap-2 cursor-pointer">
+                                                <i class="fas fa-user-shield text-primary opacity-85" style="font-size: 0.9rem;"></i>
+                                                <span>Allow Owner Direct Updates</span>
+                                            </label>
+                                            <p class="text-muted small mb-0">Allow instrument owners to update versions without admin review.</p>
+                                        </div>
+                                        <input class="form-check-input flex-shrink-0 cursor-pointer m-0" type="checkbox" id="setting-allow-owner-bypass" style="width: 2.75em; height: 1.5em;" <?= $setting_allow_owner_bypass ? 'checked' : ''; ?>>
+                                    </div>
+
+                                    <div>
+                                        <label for="setting-popular-method" class="fw-semibold text-dark mb-1 d-flex align-items-center gap-2">
+                                            <i class="fas fa-fire text-danger opacity-85" style="font-size: 0.9rem;"></i>
+                                            <span>"Popular" Tag Calculation Rule</span>
+                                        </label>
+                                        <p class="text-muted small mb-2">Select how the Popular badge is assigned to instruments, or disable it.</p>
+                                        <select class="form-select border-secondary border-opacity-25 py-2 w-100" id="setting-popular-method">
+                                            <option value="disabled" <?= $setting_popular_method === 'disabled' ? 'selected' : ''; ?>>Disabled (Hide Popular Tag)</option>
+                                            <option value="relative_60" <?= $setting_popular_method === 'relative_60' ? 'selected' : ''; ?>>Relative (60%+ max installs, min 5)</option>
+                                            <option value="min_5" <?= $setting_popular_method === 'min_5' ? 'selected' : ''; ?>>Fixed Threshold (5+ Installs)</option>
+                                            <option value="min_10" <?= $setting_popular_method === 'min_10' ? 'selected' : ''; ?>>Fixed Threshold (10+ Installs)</option>
+                                            <option value="top_3" <?= $setting_popular_method === 'top_3' ? 'selected' : ''; ?>>Top 3 Most Installed</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Email Configuration & Language (Balanced Heights Grid) -->
+                    <div class="row g-4">
+                        <div class="col-12 col-md-6 d-flex flex-column gap-4">
+                            <!-- Sender Email Address Card -->
+                            <div class="bg-white border rounded-3 p-4 shadow-sm">
+                                <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                    <i class="fas fa-paper-plane text-primary"></i>
+                                    <span>Sender Email Address</span>
+                                </h5>
+                                <p class="text-muted small mb-3">The "From" email address used for approval, decline, and alert notifications sent by this module.</p>
+                                <div>
+                                    <label for="setting-sender-email" class="form-label small fw-bold text-secondary mb-1">Sender Email Address</label>
+                                    <input type="email" class="form-control border-secondary border-opacity-25 py-2" id="setting-sender-email" value="<?= htmlspecialchars($setting_sender_email, ENT_QUOTES); ?>" placeholder="<?= htmlspecialchars($default_sender_email, ENT_QUOTES); ?>">
+                                    <div class="form-text text-muted small">If left blank, defaults to REDCap Administrator Email (<?= htmlspecialchars($default_sender_email, ENT_QUOTES); ?>).</div>
                                 </div>
                             </div>
 
                             <!-- Submission Alert Emails Card -->
-                            <div class="bg-white border rounded-3 p-4 shadow-sm">
+                            <div class="bg-white border rounded-3 p-4 shadow-sm flex-fill">
                                 <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                                     <i class="fas fa-envelope text-primary"></i>
                                     <span>Submission Alert Notifications</span>
@@ -200,7 +275,7 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS($all_admin_instruments,
                                 <p class="text-muted small mb-3">Email addresses listed below will be notified whenever a user submits a new instrument or update.</p>
 
                                 <div class="input-group mb-3">
-                                    <input type="email" class="form-control border-secondary border-opacity-25" id="new-alert-email-input" placeholder="admin@example.edu">
+                                    <input type="email" class="form-control border-secondary border-opacity-25" id="new-alert-email-input" placeholder="example@<?= $module->getContactEmailDomain(); ?>">
                                     <button class="btn btn-outline-primary fw-semibold px-3" type="button" id="add-alert-email-btn">
                                         <i class="fas fa-plus me-1"></i>Add Email
                                     </button>
@@ -212,17 +287,39 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS($all_admin_instruments,
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
+                        <div class="col-12 col-md-6">
+                            <!-- Default Decline Email Language Card -->
+                            <div class="bg-white border rounded-3 p-4 shadow-sm h-100 d-flex flex-column">
+                                <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                    <i class="fas fa-comment-dots text-primary"></i>
+                                    <span>Default Decline Email Language</span>
+                                </h5>
+                                <p class="text-muted small mb-3">Pre-populated feedback message template sent to submitters when their instrument submission is declined.</p>
+
+                                <div class="flex-fill d-flex flex-column">
+                                    <label for="setting-decline-email-body" class="form-label small fw-bold text-secondary mb-1">Decline Email Feedback Body</label>
+                                    <textarea class="form-control border-secondary border-opacity-25 flex-fill" id="setting-decline-email-body" rows="6" required><?= htmlspecialchars($setting_decline_email_body); ?></textarea>
+                                    <div class="invalid-feedback">Please enter default decline email language.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 4: Public & Internal Page Branding (2 Columns with Aligned Fields) -->
+                    <div class="row g-4">
+                        <div class="col-12 col-md-6">
                             <!-- Public Page Branding Card -->
-                            <div class="bg-white border rounded-3 p-4 shadow-sm">
+                            <div class="bg-white border rounded-3 p-4 shadow-sm h-100">
                                 <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
                                     <i class="fas fa-globe text-primary"></i>
-                                    <span>Public Page Access & Branding (Unauthenticated View)</span>
+                                    <span>Public Page Access & Branding</span>
                                 </h5>
                                 <div class="form-check form-switch p-0 d-flex align-items-center justify-content-between gap-3 mb-4 pb-3 border-bottom">
                                     <div>
                                         <label for="setting-enable-public" class="fw-semibold text-dark mb-1 d-block cursor-pointer">Enable Public Page</label>
-                                        <p class="text-muted small mb-0">Allow unauthenticated users to access the public instrument library without logging in.</p>
+                                        <p class="text-muted small mb-0">Allow unauthenticated users to access the public instrument library.</p>
                                     </div>
                                     <input class="form-check-input flex-shrink-0 cursor-pointer m-0" type="checkbox" id="setting-enable-public" style="width: 2.75em; height: 1.5em;" <?= $setting_enable_public ? 'checked' : ''; ?>>
                                 </div>
@@ -232,76 +329,34 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS($all_admin_instruments,
                                     <div class="invalid-feedback">Please enter a public page title.</div>
                                 </div>
                                 <div>
-                                    <label for="setting-public-blurb" class="form-label small fw-bold text-secondary mb-1">Public Page Blurb / Description</label>
+                                    <label for="setting-public-blurb" class="form-label small fw-bold text-secondary mb-1">Public Page Description</label>
                                     <textarea class="form-control border-secondary border-opacity-25" id="setting-public-blurb" rows="3" required><?= htmlspecialchars($setting_public_blurb); ?></textarea>
                                     <div class="invalid-feedback">Please enter a public page description.</div>
                                 </div>
                             </div>
+                        </div>
 
+                        <div class="col-12 col-md-6">
                             <!-- Internal Page Branding Card -->
-                            <div class="bg-white border rounded-3 p-4 shadow-sm">
+                            <div class="bg-white border rounded-3 p-4 shadow-sm h-100">
                                 <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
                                     <i class="fas fa-layer-group text-primary"></i>
-                                    <span>Internal Page Branding (REDCap Project View)</span>
+                                    <span>Internal Page Branding</span>
                                 </h5>
+                                <div class="mb-4 pb-3 border-bottom">
+                                    <span class="fw-semibold text-dark mb-1 d-block">Internal REDCap Access</span>
+                                    <p class="text-muted small mb-0">Active within all REDCap project navigation menus.</p>
+                                </div>
                                 <div class="mb-3">
                                     <label for="setting-internal-title" class="form-label small fw-bold text-secondary mb-1">Internal Page Title</label>
                                     <input type="text" class="form-control border-secondary border-opacity-25 py-2" id="setting-internal-title" value="<?= htmlspecialchars($setting_internal_title, ENT_QUOTES); ?>" required>
                                     <div class="invalid-feedback">Please enter an internal page title.</div>
                                 </div>
                                 <div>
-                                    <label for="setting-internal-blurb" class="form-label small fw-bold text-secondary mb-1">Internal Page Blurb / Description</label>
+                                    <label for="setting-internal-blurb" class="form-label small fw-bold text-secondary mb-1">Internal Page Description</label>
                                     <textarea class="form-control border-secondary border-opacity-25" id="setting-internal-blurb" rows="3" required><?= htmlspecialchars($setting_internal_blurb); ?></textarea>
                                     <div class="invalid-feedback">Please enter an internal page description.</div>
                                 </div>
-                            </div>
-
-                            <!-- Default Decline Email Language Card -->
-                            <div class="bg-white border rounded-3 p-4 shadow-sm">
-                                <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
-                                    <i class="fas fa-comment-dots text-primary"></i>
-                                    <span>Default Decline Email Language</span>
-                                </h5>
-                                <p class="text-muted small mb-3">Pre-populated feedback message sent to submitters when their instrument submission is declined.</p>
-
-                                <div>
-                                    <label for="setting-decline-email-body" class="form-label small fw-bold text-secondary mb-1">Decline Email Feedback Body</label>
-                                    <textarea class="form-control border-secondary border-opacity-25" id="setting-decline-email-body" rows="4" required><?= htmlspecialchars($setting_decline_email_body); ?></textarea>
-                                    <div class="invalid-feedback">Please enter default decline email language.</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right Column: Category Management & Save Action -->
-                        <div class="col-12 col-lg-5 d-flex flex-column gap-4">
-                            <!-- Category Manager Card -->
-                            <div class="bg-white border rounded-3 p-4 shadow-sm flex-fill d-flex flex-column">
-                                <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
-                                    <i class="fas fa-tags text-primary"></i>
-                                    <span>Library Categories</span>
-                                </h5>
-                                <p class="text-muted small mb-3">Manage categories available for classifying data collection instruments.</p>
-
-                                <div class="input-group mb-3">
-                                    <input type="text" class="form-control border-secondary border-opacity-25" id="new-category-input" placeholder="Add new category...">
-                                    <button class="btn btn-outline-primary fw-semibold px-3" type="button" id="add-category-btn">
-                                        <i class="fas fa-plus me-1"></i>Add
-                                    </button>
-                                </div>
-
-                                <div class="border rounded-3 p-3 bg-light bg-opacity-50 flex-fill overflow-auto" style="min-height: 200px; max-height: 320px;">
-                                    <div class="d-flex flex-wrap gap-2" id="settings-categories-list">
-                                        <!-- Categories rendered dynamically -->
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Save Action Button -->
-                            <div class="bg-white border rounded-3 p-4 shadow-sm">
-                                <button type="submit" class="btn btn-primary w-100 py-2.5 fw-semibold d-inline-flex align-items-center justify-content-center gap-2 shadow-sm" id="save-settings-btn">
-                                    <i class="fas fa-save"></i>
-                                    <span>Save Module Settings</span>
-                                </button>
                             </div>
                         </div>
                     </div>

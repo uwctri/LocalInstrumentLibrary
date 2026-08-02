@@ -13,20 +13,13 @@
     font-style: normal;
 }
 
-/* Force full-width container overrides on REDCap layout */
-#center,
+/* Force outer page wrapper to center on screen */
 #pagecontainer,
-.col-md-9,
-#sub-viewport,
-.viewport {
-    max-width: 90% !important;
-    width: 90% !important;
+#sub-viewport {
+    max-width: 1400px !important;
+    width: 95% !important;
     margin-left: auto !important;
     margin-right: auto !important;
-}
-
-#control_center_window {
-    max-width: 1000px !important;
 }
 
 #local-instrument-lib-admin-container {
@@ -116,19 +109,38 @@
 }
 
 /* Tabs styling overrides */
+#local-instrument-lib-admin-container .admin-tab-bar {
+    border-bottom: 2px solid #cbd5e1 !important;
+    min-height: 46px;
+    padding-bottom: 0 !important;
+}
+
 #local-instrument-lib-admin-container .nav-tabs-custom {
-    border-bottom: 2px solid #cbd5e1;
+    border-bottom: none !important;
+    margin-bottom: -4px !important;
+    padding-bottom: 0 !important;
+    display: flex;
+    align-items: stretch;
+}
+
+#local-instrument-lib-admin-container .nav-tabs-custom .nav-item {
+    display: flex;
+    align-items: stretch;
 }
 
 #local-instrument-lib-admin-container .nav-tabs-custom .nav-link {
     border: none !important;
     color: #64748b;
     font-weight: 600;
-    padding: 0.8rem 1.5rem;
+    padding: 0.65rem 1.5rem;
     position: relative;
     transition: color 0.2s;
     box-shadow: none !important;
     outline: none !important;
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+    line-height: 1.2;
 }
 
 #local-instrument-lib-admin-container .nav-tabs-custom .nav-link:hover,
@@ -152,11 +164,14 @@
 #local-instrument-lib-admin-container .nav-tabs-custom .nav-link.active::after {
     content: '';
     position: absolute;
-    bottom: -2px;
+    bottom: -4px;
     left: 0;
     right: 0;
-    height: 2px;
+    height: 3px;
     background-color: #4f46e5;
+    border-radius: 3px 3px 0 0;
+    box-shadow: 0 0 5px rgba(79, 70, 229, 0.4);
+    z-index: 2;
 }
 
 #adminTabsContent {
@@ -552,4 +567,30 @@ table.dataTable tbody tr:hover {
     border-color: #94a3b8 !important;
     color: #0f172a !important;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Settings Vertical Sub-Nav Styling */
+#settings-pane .nav-pills-settings .nav-link {
+    color: #475569 !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    padding: 0.75rem 1rem !important;
+    border-radius: 0.5rem !important;
+    transition: all 0.2s ease-in-out !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    text-align: left !important;
+}
+
+#settings-pane .nav-pills-settings .nav-link:hover {
+    color: #0f172a !important;
+    background-color: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+}
+
+#settings-pane .nav-pills-settings .nav-link.active {
+    color: #ffffff !important;
+    background-color: #4f46e5 !important;
+    border-color: #4f46e5 !important;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.22) !important;
 }
