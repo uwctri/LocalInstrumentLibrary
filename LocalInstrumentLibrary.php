@@ -162,7 +162,7 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         $fields = [];
 
         foreach ($lines as $line) {
-            $row = str_getcsv($line);
+            $row = str_getcsv($line, ",", '"', "\\");
             if (empty($row) || count($row) < 2) continue;
             if ($firstLine) {
                 $headers = array_map('trim', $row);
@@ -211,7 +211,7 @@ class LocalInstrumentLibrary extends AbstractExternalModule
         if (empty($metadata)) return ['status' => 'error', 'message' => 'Instrument not found or has no fields.'];
 
         $fp = fopen('php://temp', 'r+');
-        fputcsv($fp, ["Variable / Field Name", "Form Name", "Section Header", "Field Type", "Field Label", "Choices, Calculations, OR Slider Labels", "Field Note", "Text Validation Type OR Show Slider Number", "Text Validation Min", "Text Validation Max", "Identifier?", "Branching Logic", "Required?", "Custom Alignment", "Question Number", "Matrix Group Name", "Matrix Ranking?", "Field Annotation"]);
+        fputcsv($fp, ["Variable / Field Name", "Form Name", "Section Header", "Field Type", "Field Label", "Choices, Calculations, OR Slider Labels", "Field Note", "Text Validation Type OR Show Slider Number", "Text Validation Min", "Text Validation Max", "Identifier?", "Branching Logic", "Required?", "Custom Alignment", "Question Number", "Matrix Group Name", "Matrix Ranking?", "Field Annotation"], ",", '"', "\\");
 
         $fields = [];
         foreach ($metadata as $f) {
@@ -223,7 +223,7 @@ class LocalInstrumentLibrary extends AbstractExternalModule
                 $f['text_validation_max'] ?? '', $f['identifier'] ?? '', $f['branching_logic'] ?? '',
                 $f['required_field'] ?? '', $f['custom_alignment'] ?? '', $f['question_number'] ?? '',
                 $f['matrix_group_name'] ?? '', $f['matrix_ranking'] ?? '', $f['field_annotation'] ?? ''
-            ]);
+            ], ",", '"', "\\");
             $fields[] = ['label' => $f['field_label'] ?? '', 'variable' => $f['field_name'] ?? '', 'type' => $f['field_type'] ?? ''];
         }
         rewind($fp);
@@ -466,7 +466,7 @@ class LocalInstrumentLibrary extends AbstractExternalModule
                 ];
 
                 foreach ($lines as $line) {
-                    $row = str_getcsv($line);
+                    $row = str_getcsv($line, ",", '"', "\\");
                     if (empty($row) || count($row) < 2) continue;
                     if ($firstLine) {
                         $headers = array_map('trim', $row);
