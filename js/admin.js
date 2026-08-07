@@ -587,13 +587,13 @@ $("#settings-form").on("submit", function (e) {
         popular_calculation_method: $("#setting-popular-method").val()
     };
     module.ajax("save-settings", payload).then((response) => {
-        btn.prop("disabled", false).html('<i class="fas fa-save me-2"></i>Save Module Settings');
+        btn.prop("disabled", false).html('<i class="fas fa-save me-2"></i>Save Settings');
         if (response && response.status === 'success') {
-            showToast('<i class="fas fa-check-circle text-success me-1"></i> Module settings saved!');
+            showToast('<i class="fas fa-check-circle text-success me-1"></i>Settings saved!');
             setTimeout(() => location.reload(), 1000);
         } else showToast('<i class="fas fa-exclamation-triangle text-danger me-1"></i> ' + (response ? response.message : 'Failed to save settings.'));
     }).catch(() => {
-        btn.prop("disabled", false).html('<i class="fas fa-save me-2"></i>Save Module Settings');
+        btn.prop("disabled", false).html('<i class="fas fa-save me-2"></i>Save Settings');
         showToast('<i class="fas fa-exclamation-triangle text-danger me-1"></i> Error saving module settings.');
     });
 });
