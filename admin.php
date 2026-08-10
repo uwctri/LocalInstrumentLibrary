@@ -561,8 +561,8 @@ $dynamic_field_type_styles = $module->renderFieldTypeCSS(array_merge($instrument
     const downloadPageUrl = <?= json_encode($module->getUrl('download.php')); ?>;
     const categoryMapping = <?= json_encode($categories_list); ?>;
     let configuredCategories = <?= json_encode(array_values(array_map(fn($c) => $c['name'], $categories_list))); ?>;
-    let configuredAlertEmails = <?= json_encode(array_values($settings['submission_alert_emails']['value'])); ?>;
-    let configuredTrustedUsers = <?= json_encode(array_values($settings['trusted_users']['value'] ?? [])); ?>;
+    let configuredAlertEmails = <?= json_encode(array_values(array_filter(array_map('trim', (array)($settings['submission_alert_emails']['value'] ?? [])), 'strlen'))); ?>;
+    let configuredTrustedUsers = <?= json_encode(array_values(array_filter(array_map('trim', (array)($settings['trusted_users']['value'] ?? [])), 'strlen'))); ?>;
     let defaultDeclineEmailBody = <?= json_encode($settings['default_decline_email_body']['value']); ?>;
     const currentUsername = <?= json_encode($current_username); ?>;
     const allowOwnerBypass = <?= json_encode($settings['allow_owner_direct_update']['value']); ?>;

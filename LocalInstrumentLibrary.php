@@ -375,6 +375,8 @@ class LocalInstrumentLibrary extends AbstractExternalModule
     {
         $emails = $this->getSystemSetting('submission_alert_emails');
         if (empty($emails) || !is_array($emails)) return;
+        $emails = array_values(array_filter(array_map('trim', $emails), 'strlen'));
+        if (empty($emails)) return;
 
         $admin_url = $this->getUrl('admin.php');
         if (preg_match('#/redcap_v\d+\.\d+\.\d+/#i', $admin_url)) {

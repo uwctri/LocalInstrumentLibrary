@@ -499,6 +499,7 @@ window.removeSettingCategory = removeSettingCategory;
 
 const renderSettingsAlertEmails = () => {
     const listContainer = $("#settings-emails-list").empty();
+    configuredAlertEmails = (configuredAlertEmails || []).filter(e => typeof e === 'string' && e.trim() !== '');
     if (!configuredAlertEmails || configuredAlertEmails.length === 0) return listContainer.html('<span class="text-muted small">No alert emails configured. Notifications disabled.</span>');
     configuredAlertEmails.forEach((email) => {
         listContainer.append(`
@@ -532,6 +533,7 @@ window.removeSettingAlertEmail = removeSettingAlertEmail;
 
 const renderSettingsTrustedUsers = () => {
     const listContainer = $("#settings-trusted-users-list").empty();
+    configuredTrustedUsers = (configuredTrustedUsers || []).filter(u => typeof u === 'string' && u.trim() !== '');
     if (!configuredTrustedUsers || configuredTrustedUsers.length === 0) return listContainer.html('<span class="text-muted small">No trusted users configured. Standard moderation applies to non-admins.</span>');
     configuredTrustedUsers.forEach((user) => {
         listContainer.append(`
