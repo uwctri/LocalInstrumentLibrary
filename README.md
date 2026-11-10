@@ -7,3 +7,8 @@ Users can search and filter instruments by category, view field structures, prev
 
 ## Things to do after install
 Before launching the module across your organization, you should navigate to the module settings page and review default configuration. A custom setting screen is availble on the Instrument Library Administration page in the Control Center.
+
+
+## Dependencies
+
+* **Alpine.js** (`js/alpine.min.js`) - Auto-updating via GitHub Actions weekly workflow.
